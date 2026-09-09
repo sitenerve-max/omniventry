@@ -1,0 +1,6 @@
+{
+  "name": "OEMInventory",
+  "description": "India's Electronic Component Inventory & Sourcing Network - B2B technical procurement, RFQ, excess inventory discovery, and landed-cost calculation platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
