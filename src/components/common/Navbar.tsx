@@ -133,8 +133,8 @@ export const Navbar: React.FC = () => {
                   P
                 </div>
                 <div className="text-left hidden md:block leading-tight">
-                  <div className="font-semibold text-slate-100">Priya Sharma</div>
-                  <div className="text-[10px] text-slate-400">Bharat IoT (Customer)</div>
+                  <div className="font-semibold text-slate-100">Demo User A</div>
+                  <div className="text-[10px] text-slate-400">Demo Company (Customer)</div>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>

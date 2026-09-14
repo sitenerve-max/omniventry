@@ -467,7 +467,7 @@ export const AuthDemoPage: React.FC = () => {
             >
               <div>
                 <div className="font-bold text-blue-900">Sign in as Customer (OEM/EMS)</div>
-                <div className="text-[11px] text-blue-700">Priya Sharma • Bharat IoT & Telematics</div>
+                <div className="text-[11px] text-blue-700">Demo User A • Demo Electronics Pvt Ltd</div>
               </div>
               <ArrowRight className="w-4 h-4 text-blue-600" />
             </button>
@@ -495,6 +495,286 @@ export const AuthDemoPage: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Auth Pages ───────────────────────────────────────────────────────────────
+
+export const RegisterPage: React.FC = () => {
+  const { navigateTo } = useApp();
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
+          <p className="text-sm text-slate-500 mt-1">Join OEMInventory as a buyer or supplier</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">First Name</label>
+                <input type="text" placeholder="Rahul" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name</label>
+                <input type="text" placeholder="Sharma" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Work Email</label>
+              <input type="email" placeholder="you@company.com" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Company Name</label>
+              <input type="text" placeholder="Acme Electronics Pvt Ltd" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Account Type</label>
+              <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option>Buyer / OEM / EMS</option>
+                <option>Supplier / Stockist / Trader</option>
+                <option>Distributor</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+              <input type="password" placeholder="Min 8 characters" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <button
+            onClick={() => navigateTo('/auth/login')}
+            className="w-full mt-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold"
+          >
+            Create Account (Demo — No Data Saved)
+          </button>
+          <p className="text-center text-xs text-slate-500 mt-4">
+            Already have an account?{' '}
+            <button onClick={() => navigateTo('/auth/login')} className="text-blue-600 hover:underline font-semibold">Sign In</button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const ForgotPasswordPage: React.FC = () => {
+  const { navigateTo } = useApp();
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-slate-900">Forgot Password</h1>
+          <p className="text-sm text-slate-500 mt-1">Enter your email to receive a reset link</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Work Email</label>
+            <input type="email" placeholder="you@company.com" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <button className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold">
+            Send Reset Link (Demo — No Email Sent)
+          </button>
+          <p className="text-center text-xs text-slate-500">
+            <button onClick={() => navigateTo('/auth/login')} className="text-blue-600 hover:underline">Back to Login</button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const ResetPasswordPage: React.FC = () => {
+  const { navigateTo } = useApp();
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-slate-900">Reset Password</h1>
+          <p className="text-sm text-slate-500 mt-1">Enter a new password for your account</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">New Password</label>
+            <input type="password" placeholder="Min 8 characters" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm Password</label>
+            <input type="password" placeholder="Repeat new password" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <button onClick={() => navigateTo('/auth/login')} className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold">
+            Reset Password (Demo)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Directory Detail Pages ───────────────────────────────────────────────────
+
+export const ManufacturerDetailPage: React.FC = () => {
+  const { navigateTo } = useApp();
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <button onClick={() => navigateTo('/manufacturers')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← All Manufacturers</button>
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center text-blue-700 font-bold text-xl font-mono">TI</div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Texas Instruments</h1>
+          <p className="text-sm text-slate-500">Semiconductors • Dallas, TX, USA • Founded 1951</p>
+        </div>
+      </div>
+      <div className="grid lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+          <h3 className="font-bold text-sm text-slate-800 mb-3">About</h3>
+          <p className="text-xs text-slate-600 leading-relaxed">Texas Instruments is a global semiconductor company that designs, manufactures, tests and sells analog ICs and embedded processors. Key product lines include operational amplifiers, power management ICs, microcontrollers, and DSPs.</p>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            {[['Op Amps', '1,200+'], ['MCUs', '800+'], ['Power ICs', '2,000+']].map(([cat, count]) => (
+              <div key={cat} className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-center">
+                <div className="text-xs text-slate-500">{cat}</div>
+                <div className="font-bold text-slate-900 font-mono mt-0.5">{count}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+          <h4 className="font-bold text-sm text-slate-800 mb-3">Quick Actions</h4>
+          <div className="space-y-2">
+            <button onClick={() => navigateTo('/search/results')} className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-500">Search TI Parts</button>
+            <button onClick={() => navigateTo('/rfq/new')} className="w-full py-2 border border-blue-400 text-blue-600 rounded-lg text-xs font-semibold hover:bg-blue-50">Request Quote</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const CategoryDetailPage: React.FC = () => {
+  const { navigateTo } = useApp();
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <button onClick={() => navigateTo('/categories')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← All Categories</button>
+      <h1 className="text-2xl font-bold text-slate-900 mb-2">Operational Amplifiers (Op Amps)</h1>
+      <p className="text-sm text-slate-500 mb-6">Integrated Circuits → Analog ICs → Op Amps</p>
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs mb-5">
+        <h3 className="font-bold text-sm text-slate-800 mb-3">About this Category</h3>
+        <p className="text-xs text-slate-600 leading-relaxed">Operational amplifiers are voltage amplifying devices with two inputs (inverting and non-inverting) and a single output. They are fundamental building blocks in analog circuit design for amplification, filtering, signal conditioning, and comparison applications.</p>
+      </div>
+      <button onClick={() => navigateTo('/search/results')} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-500">
+        Browse Op Amp Parts →
+      </button>
+    </div>
+  );
+};
+
+export const SupplierDirectoryDetailPage: React.FC = () => {
+  const { navigateTo } = useApp();
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      <button onClick={() => navigateTo('/suppliers')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← All Suppliers</button>
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-700 font-bold text-sm font-mono">AMI</div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Apex Microelectronics India Pvt Ltd</h1>
+          <p className="text-sm text-slate-500">Franchised Stockist • Peenya Hub, Bangalore • GST Verified</p>
+        </div>
+      </div>
+      <div className="grid lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+          <h3 className="font-bold text-sm text-slate-800 mb-3">Supplier Profile</h3>
+          <p className="text-xs text-slate-600 leading-relaxed">Apex Microelectronics is a franchised stockist of Texas Instruments, STMicroelectronics, and Espressif products with a verified inventory hub at Peenya Industrial Area, Bangalore. Specializes in high-volume OEM/EMS supply with same-day dispatch capability.</p>
+          <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+            {[['Supplier Score', '98/100'], ['Response Time', '1.8 Hours'], ['On-Time Rate', '99.1%'], ['GST Status', 'Verified']].map(([k, v]) => (
+              <div key={k} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div className="text-slate-500">{k}</div>
+                <div className="font-bold text-slate-900 font-mono mt-0.5">{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+          <h4 className="font-bold text-sm text-slate-800 mb-3">Request Quote</h4>
+          <p className="text-xs text-slate-500 mb-3">This supplier responds to RFQs via OEMInventory platform only. Direct contact details are not shared.</p>
+          <button onClick={() => navigateTo('/rfq/new')} className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-500">Create RFQ</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Content Pages ────────────────────────────────────────────────────────────
+
+export const ResourcesPage: React.FC = () => (
+  <div className="max-w-4xl mx-auto px-4 py-10">
+    <h1 className="text-2xl font-bold text-slate-900 mb-2">Resources</h1>
+    <p className="text-sm text-slate-500 mb-8">Guides, documentation, and tools for electronics procurement.</p>
+    <div className="grid sm:grid-cols-2 gap-4">
+      {[
+        { title: 'Supplier Onboarding Guide', desc: 'How to upload inventory, map columns, and start receiving RFQs.', tag: 'Guide' },
+        { title: 'BOM Upload Template', desc: 'Download the standard BOM template compatible with our AI mapper.', tag: 'Template' },
+        { title: 'Understanding Landed Cost', desc: 'Learn how OEMInventory calculates landed cost for import components.', tag: 'Article' },
+        { title: 'RFQ Best Practices', desc: 'How to write effective RFQs that get faster supplier responses.', tag: 'Guide' },
+        { title: 'Component Lifecycle Guide', desc: 'Understanding Active, NRND, End-of-Life, and Obsolete status.', tag: 'Article' },
+        { title: 'API Documentation', desc: 'REST API reference for ERP integration and automated RFQ submission.', tag: 'Docs', comingSoon: true },
+      ].map(item => (
+        <div key={item.title} className={`bg-white border rounded-xl p-5 shadow-xs ${item.comingSoon ? 'border-dashed border-slate-300 opacity-60' : 'border-slate-200 hover:border-blue-300 cursor-pointer'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded font-bold">{item.tag}</span>
+            {item.comingSoon && <span className="text-[10px] text-slate-400 font-semibold">Coming Soon</span>}
+          </div>
+          <h3 className="font-bold text-sm text-slate-900">{item.title}</h3>
+          <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+export const BlogPage: React.FC = () => {
+  const { navigateTo } = useApp();
+  const posts = [
+    { slug: 'india-electronics-sourcing-2026', title: 'India Electronics Component Sourcing Trends 2026', date: 'Sep 10, 2026', tag: 'Market Intelligence' },
+    { slug: 'excess-inventory-management', title: 'How OEMs Can Monetize Excess Inventory', date: 'Sep 5, 2026', tag: 'Supply Chain' },
+    { slug: 'mpn-normalization', title: 'Why MPN Normalization Matters in B2B Procurement', date: 'Aug 28, 2026', tag: 'Technology' },
+  ];
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10">
+      <h1 className="text-2xl font-bold text-slate-900 mb-2">Blog</h1>
+      <p className="text-sm text-slate-500 mb-8">Electronics procurement insights, supply chain intelligence, and industry news.</p>
+      <div className="space-y-4">
+        {posts.map(post => (
+          <div key={post.slug} onClick={() => navigateTo(`/blog/${post.slug}`)}
+            className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs cursor-pointer hover:border-blue-300 transition-colors">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-[10px] px-2 py-0.5 bg-teal-100 text-teal-700 rounded font-bold">{post.tag}</span>
+              <span className="text-xs text-slate-400">{post.date}</span>
+            </div>
+            <h2 className="font-bold text-slate-900">{post.title}</h2>
+            <p className="text-xs text-blue-600 mt-2 hover:underline">Read more →</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export const BlogPostPage: React.FC = () => {
+  const { navigateTo } = useApp();
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-10">
+      <button onClick={() => navigateTo('/blog')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← Back to Blog</button>
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-[10px] px-2 py-0.5 bg-teal-100 text-teal-700 rounded font-bold">Market Intelligence</span>
+        <span className="text-xs text-slate-400">Sep 10, 2026</span>
+      </div>
+      <h1 className="text-2xl font-bold text-slate-900 mb-4">India Electronics Component Sourcing Trends 2026</h1>
+      <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
+        <p>The Indian electronics manufacturing sector is experiencing unprecedented growth driven by PLI schemes, China+1 supply chain diversification, and increased domestic EV and telecom deployments.</p>
+        <p>Key sourcing challenges in 2026 include lead time volatility for passives, counterfeit risk in spot-market procurement, and currency fluctuation impact on landed cost for USD-denominated components.</p>
+        <p className="text-slate-400 italic">This is a demo blog post. In production, full content would be published here with rich text formatting, images, and related part recommendations.</p>
       </div>
     </div>
   );

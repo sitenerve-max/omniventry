@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import {
   PortalType,
   AdminRole,
@@ -53,7 +53,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [portal, setPortal] = useState<PortalType>('public');
-  const [currentRoute, setCurrentRoute] = useState<string>('/');
+  const [currentRoute, setCurrentRoute] = useState<string>(() => window.location.pathname || '/');
   const [routeParams, setRouteParams] = useState<Record<string, string>>({ mpn: 'LM358DR', id: 'rfq-101' });
   const [adminRole, setAdminRole] = useState<AdminRole>('Super Admin');
   const [searchQuery, setSearchQuery] = useState<string>('LM358DR');
@@ -68,6 +68,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [compareList, setCompareList] = useState<string[]>(['LM358DR']);
   const [draftRfqItems, setDraftRfqItems] = useState<Partial<RfqLineItem>[]>([
     {
+      id: 'li-' + Date.now(),
       mpn: 'LM358DR',
       manufacturer: 'Texas Instruments',
       requiredQuantity: 10000,
@@ -97,12 +98,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  useEffect(() => {
+    const onPop = () => setCurrentRoute(window.location.pathname || '/');
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
   const navigateTo = (route: string, params?: Record<string, string>) => {
+    history.pushState(null, '', route);
     setCurrentRoute(route);
     if (params) {
       setRouteParams((prev) => ({ ...prev, ...params }));
     }
-    // Auto sync portal if route begins with a portal prefix
     if (route.startsWith('/customer')) {
       setPortal('customer');
     } else if (route.startsWith('/supplier')) {
@@ -110,7 +117,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } else if (route.startsWith('/admin')) {
       setPortal('admin');
     } else {
-      // Check if switching to a public route
       if (!['customer', 'supplier', 'admin'].includes(portal)) {
         setPortal('public');
       }
@@ -178,10 +184,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const newRfq: CustomerRfq = {
       id: newId,
       rfqNumber: newNumber,
-      customerName: rfqData.customerName || 'Priya Sharma (Procurement Head)',
-      companyName: rfqData.companyName || 'Bharat IoT & Telematics Pvt Ltd',
-      email: rfqData.email || 'priya.s@bharatiot.co.in',
-      phone: rfqData.phone || '+91 98450 11223',
+      customerName: rfqData.customerName || 'Demo User A (Procurement)',
+      companyName: rfqData.companyName || 'Demo Company A (IoT & Telematics)',
+      email: rfqData.email || 'buyer@democompany-a.example',
+      phone: rfqData.phone || '+91 90000 00001',
       createdAt: 'Just now',
       requiredDate: rfqData.requiredDate || '2026-10-01',
       deliveryLocation: rfqData.deliveryLocation || 'Bangalore, Karnataka',
@@ -220,7 +226,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         {
           id: `neg-${Date.now()}`,
           timestamp: 'Just now',
-          actor: 'Priya Sharma (Customer)',
+          actor: 'Demo User A (Customer)',
           type,
           note,
           status: 'Pending Review',

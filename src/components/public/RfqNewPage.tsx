@@ -17,14 +17,14 @@ import { RfqLineItem } from '../../types';
 export const RfqNewPage: React.FC = () => {
   const { draftRfqItems, addPartToDraftRfq, removeDraftRfqItem, submitNewRfq, navigateTo } = useApp();
 
-  const [companyName, setCompanyName] = useState('Bharat IoT & Telematics Pvt Ltd');
-  const [customerName, setCustomerName] = useState('Priya Sharma (Procurement Head)');
-  const [email, setEmail] = useState('priya.s@bharatiot.co.in');
-  const [phone, setPhone] = useState('+91 98450 11223');
+  const [companyName, setCompanyName] = useState('Demo Electronics Pvt Ltd');
+  const [customerName, setCustomerName] = useState('Demo User A (Procurement)');
+  const [email, setEmail] = useState('buyer@democompany.example');
+  const [phone, setPhone] = useState('+91 90000 10001');
   const [deliveryLocation, setDeliveryLocation] = useState('Electronic City, Bangalore, Karnataka - 560100');
   const [requiredDate, setRequiredDate] = useState('2026-09-25');
   const [paymentTerms, setPaymentTerms] = useState('30 Days Net on Approved Credit');
-  const [remarks, setRemarks] = useState('EV Telematics production batch. Date code 23+ in original sealed reels only.');
+  const [remarks, setRemarks] = useState('Demo production batch. Date code 23+ in original sealed reels only.');
 
   // Manual line item add state
   const [newMpn, setNewMpn] = useState('');

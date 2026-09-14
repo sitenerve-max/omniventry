@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { MOCK_AUDIT_LOGS } from '../../data/mockData';
-import { QcStatusBadge } from '../common/Badge';
+import { MOCK_AUDIT_LOGS, MOCK_QC_RECORDS } from '../../data/mockData';
+import { QcStatusBadge, RfqStatusBadge } from '../common/Badge';
 import {
   ShieldAlert,
   Calculator,
@@ -15,6 +15,25 @@ import {
   Truck,
   Eye,
   SlidersHorizontal,
+  LayoutDashboard,
+  Users,
+  Building,
+  Package,
+  Tag,
+  Boxes,
+  ClipboardList,
+  DollarSign,
+  Settings,
+  Bell,
+  BarChart3,
+  FileText,
+  LogOut,
+  Menu,
+  X,
+  Plus,
+  Search,
+  MapPin,
+  Shield,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -367,3 +386,419 @@ export const AdminAuditLogs: React.FC = () => {
     </div>
   );
 };
+
+// ─── AdminLayout ─────────────────────────────────────────────────────────────
+
+const Send = ArrowRight;
+
+const ADMIN_NAV = [
+  { label: 'Dashboard', icon: LayoutDashboard, route: '/admin/dashboard' },
+  { label: 'RFQs', icon: FileSpreadsheet, route: '/admin/rfqs' },
+  { label: 'Vendor RFQs', icon: Send, route: '/admin/vendor-rfqs' },
+  { label: 'Supplier Quotes', icon: DollarSign, route: '/admin/supplier-quotations' },
+  { label: 'Customer Quotes', icon: ClipboardList, route: '/admin/customer-quotations' },
+  { label: 'Sales Orders', icon: FileText, route: '/admin/sales-orders' },
+  { label: 'Purchase Orders', icon: Package, route: '/admin/purchase-orders' },
+  { label: 'QC', icon: ShieldAlert, route: '/admin/qc' },
+  { label: 'Warehouse', icon: Boxes, route: '/admin/warehouse' },
+  { label: 'Dispatch', icon: Truck, route: '/admin/dispatch' },
+  { label: 'Landed Cost', icon: Calculator, route: '/admin/landed-cost' },
+  { label: 'Invoices', icon: FileText, route: '/admin/invoices' },
+  { label: 'Customers', icon: Users, route: '/admin/customers' },
+  { label: 'Suppliers', icon: Building, route: '/admin/suppliers' },
+  { label: 'Inventory', icon: Layers, route: '/admin/inventory' },
+  { label: 'Products', icon: Cpu, route: '/admin/products' },
+  { label: 'Reports', icon: BarChart3, route: '/admin/reports' },
+  { label: 'Audit Logs', icon: Shield, route: '/admin/audit' },
+  { label: 'Settings', icon: Settings, route: '/admin/settings' },
+];
+
+interface AdminLayoutProps { children: React.ReactNode; title: string; }
+
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title }) => {
+  const { currentRoute, navigateTo, adminRole } = useApp();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <div className="flex min-h-screen bg-slate-50">
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <aside className={`fixed top-0 left-0 h-full w-56 bg-slate-950 text-white z-40 flex flex-col transition-transform duration-200
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:relative lg:flex lg:z-auto`}>
+        <div className="px-4 py-4 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <div className="text-xs font-mono text-blue-400 uppercase tracking-wider">Admin Portal</div>
+            <div className="text-sm font-bold text-white mt-0.5">OEMInventory Ops</div>
+            <div className="text-[10px] text-slate-400">{adminRole}</div>
+          </div>
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="mx-3 mt-3 px-2 py-1 rounded bg-amber-900/40 border border-amber-700/50 text-amber-300 text-[10px] font-mono text-center">
+          ⚠ Demo Environment
+        </div>
+        <nav className="flex-1 py-3 overflow-y-auto">
+          {ADMIN_NAV.map(item => {
+            const active = currentRoute === item.route || currentRoute.startsWith(item.route + '/');
+            return (
+              <button key={item.route} onClick={() => { navigateTo(item.route); setSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-2 text-xs font-medium transition-colors ${active ? 'bg-blue-700/30 text-blue-300 border-r-2 border-blue-400' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+                <item.icon className="w-3.5 h-3.5 shrink-0" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="border-t border-slate-800 px-4 py-3">
+          <button onClick={() => navigateTo('/')} className="flex items-center gap-2 text-slate-400 hover:text-white text-xs">
+            <LogOut className="w-3.5 h-3.5" /><span>Back to Public Site</span>
+          </button>
+        </div>
+      </aside>
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-20">
+          <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-1.5 rounded bg-slate-100 text-slate-600 hover:bg-slate-200">
+            <Menu className="w-4 h-4" />
+          </button>
+          <h1 className="text-sm font-bold text-slate-900 flex-1">{title}</h1>
+          <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">A</div>
+        </div>
+        <div className="flex-1 p-4 sm:p-6">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+// ─── AdminRfqsList ────────────────────────────────────────────────────────────
+
+export const AdminRfqsList: React.FC = () => {
+  const { rfqs, navigateTo } = useApp();
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const filtered = statusFilter === 'all' ? rfqs : rfqs.filter(r => r.status === statusFilter);
+
+  return (
+    <AdminLayout title="RFQ Management">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div className="text-sm text-slate-500">{filtered.length} RFQ{filtered.length !== 1 ? 's' : ''}</div>
+        <div className="flex gap-2">
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">All Statuses</option>
+            {['Submitted', 'Supplier Matching', 'Vendor RFQ Sent', 'Supplier Response', 'Under Evaluation', 'Customer Quotation', 'Negotiation', 'Accepted'].map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="bg-slate-50 border-b border-slate-200">
+              {['RFQ #', 'Customer / Company', 'Line Items', 'Status', 'Required Date', 'Delivery', 'Suppliers', 'Quotes', 'Actions'].map(h => (
+                <th key={h} className="px-3 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {filtered.length === 0 && (
+                <tr><td colSpan={9} className="text-center py-12 text-slate-400">
+                  <FileSpreadsheet className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                  <p className="font-medium">No RFQs found</p>
+                </td></tr>
+              )}
+              {filtered.map(rfq => (
+                <tr key={rfq.id} className="border-b border-slate-50 hover:bg-blue-50/30 transition-colors">
+                  <td className="px-3 py-3 font-mono font-bold text-slate-800 whitespace-nowrap">{rfq.rfqNumber}</td>
+                  <td className="px-3 py-3">
+                    <div className="font-semibold text-slate-800">{rfq.companyName}</div>
+                    <div className="text-[11px] text-slate-400">{rfq.customerName}</div>
+                  </td>
+                  <td className="px-3 py-3 font-mono text-slate-700">{rfq.lineItems.length}</td>
+                  <td className="px-3 py-3"><RfqStatusBadge status={rfq.status} /></td>
+                  <td className="px-3 py-3 text-slate-500 whitespace-nowrap">{rfq.requiredDate}</td>
+                  <td className="px-3 py-3 text-slate-500 whitespace-nowrap">
+                    <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{rfq.deliveryLocation.split(',')[0]}</span>
+                  </td>
+                  <td className="px-3 py-3 font-mono text-slate-700">{rfq.matchedSuppliersCount}</td>
+                  <td className="px-3 py-3">
+                    <span className={`font-bold font-mono ${rfq.receivedQuotesCount > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {rfq.receivedQuotesCount}/{rfq.matchedSuppliersCount}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 flex gap-1">
+                    <button onClick={() => navigateTo(`/admin/rfqs/${rfq.id}`)} className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-500 flex items-center gap-0.5">
+                      <Eye className="w-2.5 h-2.5" /> View
+                    </button>
+                    <button onClick={() => navigateTo('/admin/landed-cost')} className="px-2 py-1 border border-indigo-400 text-indigo-600 rounded text-[10px] hover:bg-indigo-50">
+                      Quote
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
+
+// ─── AdminRfqDetail ───────────────────────────────────────────────────────────
+
+export const AdminRfqDetail: React.FC = () => {
+  const { rfqs, navigateTo } = useApp();
+  const rfq = rfqs[0];
+  if (!rfq) return null;
+
+  return (
+    <AdminLayout title={`RFQ — ${rfq.rfqNumber}`}>
+      <button onClick={() => navigateTo('/admin/rfqs')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← Back to RFQs</button>
+      <div className="flex items-center gap-3 mb-6">
+        <span className="font-mono font-bold text-xl text-slate-900">{rfq.rfqNumber}</span>
+        <RfqStatusBadge status={rfq.status} />
+      </div>
+      <div className="grid lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100"><h3 className="font-bold text-sm">Line Items</h3></div>
+          <table className="w-full text-xs">
+            <thead><tr className="bg-slate-50 border-b border-slate-100">
+              {['MPN', 'Manufacturer', 'Qty Required', 'Target Date', 'Status'].map(h => (
+                <th key={h} className="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {rfq.lineItems.map(li => (
+                <tr key={li.id} className="border-b border-slate-50">
+                  <td className="px-4 py-3 font-mono font-bold text-blue-700">{li.mpn}</td>
+                  <td className="px-4 py-3 text-slate-600">{li.manufacturer}</td>
+                  <td className="px-4 py-3 font-mono">{li.requiredQuantity.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-slate-500">{li.targetDate || rfq.requiredDate}</td>
+                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">{li.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs text-xs space-y-2">
+            <h4 className="font-bold text-sm text-slate-800">RFQ Info</h4>
+            {[['Customer', rfq.companyName], ['Contact', rfq.customerName], ['Delivery', rfq.deliveryLocation], ['Required By', rfq.requiredDate], ['Currency', rfq.currency], ['Payment', rfq.paymentTerms]].map(([k, v]) => (
+              <div key={k} className="flex justify-between"><span className="text-slate-500">{k}</span><span className="font-medium text-slate-800 text-right">{v}</span></div>
+            ))}
+          </div>
+          <button onClick={() => navigateTo('/admin/landed-cost')} className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-500 flex items-center justify-center gap-1.5">
+            <Calculator className="w-3.5 h-3.5" /> Build Quotation
+          </button>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
+
+// ─── AdminQCPage ──────────────────────────────────────────────────────────────
+
+export const AdminQCPage: React.FC = () => {
+  const { addToast, navigateTo } = useApp();
+  const [selected, setSelected] = useState<string | null>(null);
+
+  const record = MOCK_QC_RECORDS[0];
+
+  return (
+    <AdminLayout title="QC Inspection Queue">
+      <div className="grid lg:grid-cols-3 gap-5">
+        {/* Queue list */}
+        <div className="lg:col-span-1 space-y-3">
+          <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Pending Inspection ({MOCK_QC_RECORDS.length})</div>
+          {MOCK_QC_RECORDS.map(rec => (
+            <div key={rec.id} onClick={() => setSelected(rec.id)}
+              className={`bg-white border rounded-xl p-4 cursor-pointer shadow-xs text-xs transition-colors ${selected === rec.id ? 'border-blue-400 ring-1 ring-blue-300' : 'border-slate-200 hover:border-slate-300'}`}>
+              <div className="font-mono font-bold text-slate-900">{rec.mpn}</div>
+              <div className="text-slate-600 mt-0.5">Lot: {rec.lotNumber}</div>
+              <div className="flex items-center gap-2 mt-2">
+                <QcStatusBadge status={rec.status} />
+                <span className="text-slate-400">{rec.inspectionDate}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Inspection detail */}
+        <div className="lg:col-span-2">
+          {selected ? (
+            <div className="bg-white border border-slate-200 rounded-xl shadow-xs">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <div className="font-mono font-bold text-slate-900">{record.mpn} — {record.lotNumber}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">Inspector: {record.inspector} • {record.inspectionDate}</div>
+                </div>
+                <QcStatusBadge status={record.status} />
+              </div>
+              <div className="p-5">
+                <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider mb-3">QC Checklist</h4>
+                <div className="space-y-2">
+                  {record.checklists.map((item, i) => (
+                    <div key={i} className={`flex items-center justify-between p-3 rounded-lg border text-xs ${item.passed ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${item.passed ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+                          {item.passed ? '✓' : '✗'}
+                        </span>
+                        <span className="font-medium text-slate-800">{item.name}</span>
+                      </div>
+                      {item.notes && <span className="text-slate-500 italic">{item.notes}</span>}
+                    </div>
+                  ))}
+                </div>
+                {record.notes && (
+                  <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600">
+                    <strong>Notes:</strong> {record.notes}
+                  </div>
+                )}
+                <div className="mt-5 flex gap-3">
+                  <button onClick={() => { addToast('QC Passed', `${record.mpn} lot marked as passed. Proceeding to warehouse.`, 'success'); navigateTo('/admin/warehouse'); }}
+                    className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-500">✓ Mark QC Passed</button>
+                  <button onClick={() => addToast('QC Failed', `${record.mpn} lot marked as failed. Supplier notified.`, 'error')}
+                    className="flex-1 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-500">✗ Mark QC Failed</button>
+                  <button onClick={() => addToast('Conditional Pass', `${record.mpn} marked with conditions. Review required.`, 'warning')}
+                    className="flex-1 py-2 border border-amber-400 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-50">Conditional</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-400">
+              <ShieldAlert className="w-10 h-10 mx-auto mb-3 text-slate-300" />
+              <p className="font-medium">Select a lot to inspect</p>
+              <p className="text-xs mt-1">Click on any item from the queue on the left.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center gap-2">
+        <AlertTriangle className="w-4 h-4 shrink-0" />
+        <span><strong>Demo Data:</strong> QC records shown are representative mock data. Actions trigger toast confirmations only.</span>
+      </div>
+    </AdminLayout>
+  );
+};
+
+// ─── Admin Stub Pages ─────────────────────────────────────────────────────────
+
+const AdminStub: React.FC<{ title: string; icon: React.ReactNode; description: string; version?: string }> = ({ title, icon, description, version = 'v2' }) => (
+  <AdminLayout title={title}>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-4">{icon}</div>
+      <h2 className="text-lg font-bold text-slate-800 mb-2">{title}</h2>
+      <p className="text-sm text-slate-500 max-w-sm mb-4">{description}</p>
+      <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">Coming Soon — {version}</span>
+    </div>
+  </AdminLayout>
+);
+
+export const AdminCustomers: React.FC = () => (
+  <AdminStub title="Customer Management" icon={<Users className="w-8 h-8" />} description="Manage customer accounts, company profiles, contacts, and procurement history." version="v1.1" />
+);
+export const AdminCustomerDetail: React.FC = () => (
+  <AdminStub title="Customer Detail" icon={<Users className="w-8 h-8" />} description="View full customer profile, RFQ history, quotations, and orders." version="v1.1" />
+);
+export const AdminSuppliers: React.FC = () => (
+  <AdminStub title="Supplier Management" icon={<Building className="w-8 h-8" />} description="Manage supplier profiles, KYC status, scoring, and performance metrics." version="v1.1" />
+);
+export const AdminSupplierDetail: React.FC = () => (
+  <AdminStub title="Supplier Detail" icon={<Building className="w-8 h-8" />} description="View supplier profile, inventory, quotation history, and performance." version="v1.1" />
+);
+export const AdminManufacturers: React.FC = () => (
+  <AdminStub title="Manufacturers" icon={<Cpu className="w-8 h-8" />} description="Manage manufacturer records, aliases, and MPN normalization rules." version="v2" />
+);
+export const AdminProducts: React.FC = () => (
+  <AdminStub title="Product Catalog" icon={<Package className="w-8 h-8" />} description="Manage component master data, parametric attributes, and lifecycle status." version="v2" />
+);
+export const AdminProductDetail: React.FC = () => (
+  <AdminStub title="Product Detail" icon={<Package className="w-8 h-8" />} description="View and edit component master data, alternatives, and specifications." version="v2" />
+);
+export const AdminCategories: React.FC = () => (
+  <AdminStub title="Categories" icon={<Tag className="w-8 h-8" />} description="Manage component taxonomy, category hierarchies, and parametric filters." version="v2" />
+);
+export const AdminInventory: React.FC = () => (
+  <AdminStub title="Inventory Management" icon={<Boxes className="w-8 h-8" />} description="View all supplier inventory lots, verification status, and ageing reports." version="v1.1" />
+);
+export const AdminInventoryDetail: React.FC = () => (
+  <AdminStub title="Inventory Detail" icon={<Boxes className="w-8 h-8" />} description="View lot details, verification history, and supplier information." version="v1.1" />
+);
+export const AdminBom: React.FC = () => (
+  <AdminStub title="BOM Management" icon={<FileSpreadsheet className="w-8 h-8" />} description="Review customer-uploaded BOMs, coverage analysis, and sourcing assignments." version="v2" />
+);
+export const AdminBomDetail: React.FC = () => (
+  <AdminStub title="BOM Detail" icon={<FileSpreadsheet className="w-8 h-8" />} description="View BOM line items, coverage status, and RFQ conversion." version="v2" />
+);
+export const AdminVendorRfqs: React.FC = () => (
+  <AdminStub title="Vendor RFQs" icon={<FileSpreadsheet className="w-8 h-8" />} description="Manage RFQs sent to suppliers, response tracking, and follow-ups." version="v2" />
+);
+export const AdminVendorRfqDetail: React.FC = () => (
+  <AdminStub title="Vendor RFQ Detail" icon={<FileSpreadsheet className="w-8 h-8" />} description="View vendor RFQ details, supplier responses, and comparison matrix." version="v2" />
+);
+export const AdminSupplierQuotations: React.FC = () => (
+  <AdminStub title="Supplier Quotations" icon={<DollarSign className="w-8 h-8" />} description="Review and compare supplier quotations for each customer RFQ." version="v1.1" />
+);
+export const AdminSupplierQuotationDetail: React.FC = () => (
+  <AdminStub title="Supplier Quotation Detail" icon={<DollarSign className="w-8 h-8" />} description="View supplier quote details, pricing breakdown, and evaluation scores." version="v1.1" />
+);
+export const AdminCustomerQuotations: React.FC = () => (
+  <AdminStub title="Customer Quotations" icon={<ClipboardList className="w-8 h-8" />} description="Manage quotations sent to customers, approval status, and negotiation logs." version="v1.1" />
+);
+export const AdminCustomerQuotationDetail: React.FC = () => (
+  <AdminStub title="Customer Quotation Detail" icon={<ClipboardList className="w-8 h-8" />} description="View customer quotation, approval chain, and negotiation history." version="v1.1" />
+);
+export const AdminNegotiations: React.FC = () => (
+  <AdminStub title="Negotiations" icon={<DollarSign className="w-8 h-8" />} description="Manage active price negotiations, counter-offers, and approval escalations." version="v2" />
+);
+export const AdminSalesOrders: React.FC = () => (
+  <AdminStub title="Sales Orders" icon={<FileText className="w-8 h-8" />} description="View confirmed sales orders, payment status, and delivery tracking." version="v1.1" />
+);
+export const AdminSalesOrderDetail: React.FC = () => (
+  <AdminStub title="Sales Order Detail" icon={<FileText className="w-8 h-8" />} description="View sales order line items, delivery schedule, and invoice details." version="v1.1" />
+);
+export const AdminPurchaseOrders: React.FC = () => (
+  <AdminStub title="Purchase Orders" icon={<Package className="w-8 h-8" />} description="Manage purchase orders issued to suppliers, GRN, and payment tracking." version="v1.1" />
+);
+export const AdminPurchaseOrderDetail: React.FC = () => (
+  <AdminStub title="Purchase Order Detail" icon={<Package className="w-8 h-8" />} description="View PO details, GRN status, and supplier invoice reconciliation." version="v1.1" />
+);
+export const AdminWarehouse: React.FC = () => (
+  <AdminStub title="Warehouse" icon={<Boxes className="w-8 h-8" />} description="Manage warehouse locations, stock movements, and putaway records." version="v2" />
+);
+export const AdminDispatch: React.FC = () => (
+  <AdminStub title="Dispatch" icon={<Truck className="w-8 h-8" />} description="Create dispatch notes, assign couriers, generate packing lists, and track shipments." version="v2" />
+);
+export const AdminInvoices: React.FC = () => (
+  <AdminStub title="Invoices" icon={<FileText className="w-8 h-8" />} description="Generate and manage customer and supplier invoices with GST compliance." version="v2" />
+);
+export const AdminPayments: React.FC = () => (
+  <AdminStub title="Payments" icon={<DollarSign className="w-8 h-8" />} description="Track customer payments received and supplier payments made." version="v2" />
+);
+export const AdminCrm: React.FC = () => (
+  <AdminStub title="CRM" icon={<Users className="w-8 h-8" />} description="Manage customer relationships, follow-up tasks, and deal pipeline." version="v3" />
+);
+export const AdminTasks: React.FC = () => (
+  <AdminStub title="Tasks" icon={<ClipboardList className="w-8 h-8" />} description="Manage internal team tasks, assignments, and SLA tracking." version="v2" />
+);
+export const AdminMarketing: React.FC = () => (
+  <AdminStub title="Marketing" icon={<TrendingUp className="w-8 h-8" />} description="Manage email campaigns, supplier outreach, and customer acquisition funnels." version="v3" />
+);
+export const AdminPartAlerts: React.FC = () => (
+  <AdminStub title="Part Alerts" icon={<Bell className="w-8 h-8" />} description="View and manage customer part alerts, notification triggers, and match events." version="v2" />
+);
+export const AdminReports: React.FC = () => (
+  <AdminStub title="Reports" icon={<BarChart3 className="w-8 h-8" />} description="Business intelligence reports: revenue, margins, inventory turnover, and supplier performance." version="v2" />
+);
+export const AdminDocuments: React.FC = () => (
+  <AdminStub title="Documents" icon={<FileText className="w-8 h-8" />} description="Central document repository for quotations, POs, invoices, and compliance certificates." version="v2" />
+);
+export const AdminUsersRoles: React.FC = () => (
+  <AdminStub title="Users & Roles" icon={<Users className="w-8 h-8" />} description="Manage internal team accounts, role assignments, and permission matrix." version="v1.1" />
+);
+export const AdminSettings: React.FC = () => (
+  <AdminStub title="Settings" icon={<Settings className="w-8 h-8" />} description="Configure platform settings: approval thresholds, notification rules, and integration keys." version="v1.1" />
+);
