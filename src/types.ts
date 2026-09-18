@@ -208,6 +208,9 @@ export interface CustomerQuotation {
   totalInr: number;
   paymentTerms: string;
   approvalStatus: 'Draft' | 'Pending Sales Manager' | 'Pending Director' | 'Approved' | 'Rejected';
+  /** True when priced by the flat-margin demo calculation rather than the real Landed Cost Engine. Never shown to customers. */
+  isDemoCalculation?: boolean;
+  calculationLabel?: string;
   negotiationLog: {
     id: string;
     timestamp: string;
@@ -281,6 +284,17 @@ export interface PartAlert {
   status: 'Active' | 'Paused';
   createdAt: string;
   lastTriggered?: string;
+}
+
+export interface VendorRfqRecord {
+  id: string;
+  rfqId: string;
+  rfqNumber: string;
+  supplierId: string;
+  supplierName: string;
+  sentAt: string;
+  status: 'Sent' | 'Responded' | 'Declined' | 'No Response';
+  respondedAt?: string;
 }
 
 export interface ToastMessage {

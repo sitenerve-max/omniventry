@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { MOCK_AUDIT_LOGS, MOCK_QC_RECORDS } from '../../data/mockData';
-import { QcStatusBadge, RfqStatusBadge } from '../common/Badge';
+import {
+  MOCK_AUDIT_LOGS,
+  MOCK_QC_RECORDS,
+  MOCK_VENDOR_RFQS,
+  MOCK_SUPPLIER_QUOTES,
+  MOCK_SUPPLIERS,
+} from '../../data/mockData';
+import { QcStatusBadge, RfqStatusBadge, SupplierScoreBadge } from '../common/Badge';
 import {
   ShieldAlert,
   Calculator,
@@ -34,6 +40,9 @@ import {
   Search,
   MapPin,
   Shield,
+  XCircle,
+  Clock,
+  Award,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -49,7 +58,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Internal Platform Operations</h1>
             <p className="text-xs text-slate-600 mt-0.5">
-              Logged in: Vikram Malhotra (Procurement & QC Lead) • Pan-India Logistics
+              Logged in: Demo Staff A (Procurement & QC Lead) • Pan-India Logistics
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -733,24 +742,444 @@ export const AdminBom: React.FC = () => (
 export const AdminBomDetail: React.FC = () => (
   <AdminStub title="BOM Detail" icon={<FileSpreadsheet className="w-8 h-8" />} description="View BOM line items, coverage status, and RFQ conversion." version="v2" />
 );
-export const AdminVendorRfqs: React.FC = () => (
-  <AdminStub title="Vendor RFQs" icon={<FileSpreadsheet className="w-8 h-8" />} description="Manage RFQs sent to suppliers, response tracking, and follow-ups." version="v2" />
+// ─── Vendor RFQs ────────────────────────────────────────────────────────────
+
+const VENDOR_STATUS_STYLE: Record<string, string> = {
+  Responded: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Sent: 'bg-blue-50 text-blue-700 border-blue-200',
+  Declined: 'bg-rose-50 text-rose-700 border-rose-200',
+  'No Response': 'bg-slate-100 text-slate-500 border-slate-200',
+};
+
+const VendorStatusPill: React.FC<{ status: string }> = ({ status }) => (
+  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold border ${VENDOR_STATUS_STYLE[status] || VENDOR_STATUS_STYLE['No Response']}`}>
+    {status === 'Responded' && <CheckCircle2 className="w-3 h-3" />}
+    {status === 'Sent' && <Clock className="w-3 h-3" />}
+    {status === 'Declined' && <XCircle className="w-3 h-3" />}
+    {status}
+  </span>
 );
-export const AdminVendorRfqDetail: React.FC = () => (
-  <AdminStub title="Vendor RFQ Detail" icon={<FileSpreadsheet className="w-8 h-8" />} description="View vendor RFQ details, supplier responses, and comparison matrix." version="v2" />
+
+export const AdminVendorRfqs: React.FC = () => {
+  const { navigateTo } = useApp();
+  const grouped: Record<string, typeof MOCK_VENDOR_RFQS> = {};
+  MOCK_VENDOR_RFQS.forEach((v) => {
+    (grouped[v.rfqId] ||= []).push(v);
+  });
+
+  return (
+    <AdminLayout title="Vendor RFQs">
+      <p className="text-xs text-slate-500 mb-4">RFQs dispatched to matched suppliers, grouped by customer RFQ.</p>
+      <div className="space-y-4">
+        {Object.entries(grouped).map(([rfqId, records]) => {
+          const responded = records.filter((r) => r.status === 'Responded').length;
+          return (
+            <div key={rfqId} className="bg-white border border-slate-200 rounded-xl shadow-xs p-4">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div>
+                  <span className="font-mono font-bold text-sm text-slate-900">{records[0].rfqNumber}</span>
+                  <span className="ml-2 text-[11px] text-slate-500">
+                    {records.length} supplier{records.length !== 1 ? 's' : ''} contacted • {responded} responded
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigateTo(`/admin/vendor-rfqs/${rfqId}`)}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-semibold flex items-center gap-1"
+                >
+                  <Eye className="w-3 h-3" /> View
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {records.map((r) => (
+                  <span key={r.id} className="text-slate-700 text-[11px] flex items-center gap-1.5">
+                    {r.supplierName} <VendorStatusPill status={r.status} />
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </AdminLayout>
+  );
+};
+
+export const AdminVendorRfqDetail: React.FC = () => {
+  const { currentRoute, navigateTo } = useApp();
+  const rfqId = currentRoute.split('/').pop() || '';
+  const records = MOCK_VENDOR_RFQS.filter((v) => v.rfqId === rfqId);
+
+  if (records.length === 0) {
+    return (
+      <AdminLayout title="Vendor RFQ Detail">
+        <button onClick={() => navigateTo('/admin/vendor-rfqs')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← Back to Vendor RFQs</button>
+        <p className="text-sm text-slate-500">No vendor RFQ records found for this RFQ.</p>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout title={`Vendor RFQ — ${records[0].rfqNumber}`}>
+      <button onClick={() => navigateTo('/admin/vendor-rfqs')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← Back to Vendor RFQs</button>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="bg-slate-50 border-b border-slate-200">
+              {['Supplier', 'Sent At', 'Status', 'Responded At', 'Action'].map((h) => (
+                <th key={h} className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {records.map((r) => (
+                <tr key={r.id} className="border-b border-slate-50 hover:bg-blue-50/30">
+                  <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">{r.supplierName}</td>
+                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{r.sentAt}</td>
+                  <td className="px-4 py-3"><VendorStatusPill status={r.status} /></td>
+                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{r.respondedAt || '—'}</td>
+                  <td className="px-4 py-3">
+                    {r.status === 'Responded' && (
+                      <button onClick={() => navigateTo('/admin/supplier-quotations')} className="px-2 py-1 bg-indigo-600 text-white rounded text-[10px] font-semibold hover:bg-indigo-500">
+                        View Quote
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
+
+// ─── Supplier Quotations & Comparison ───────────────────────────────────────
+
+const LEAD_TIME_RANK = (text: string): number => {
+  const t = text.toLowerCase();
+  if (t.includes('same day')) return 0;
+  if (t.includes('24')) return 1;
+  if (t.includes('1-2') || t.includes('2-3')) return 2;
+  if (t.includes('3-4')) return 3;
+  return 4;
+};
+
+const computeQuoteBadges = (quotes: typeof MOCK_SUPPLIER_QUOTES) => ({
+  bestCommercial: quotes.reduce((a, b) => (b.unitPrice < a.unitPrice ? b : a)),
+  bestQuality: quotes.reduce((a, b) => (b.qualityScore > a.qualityScore ? b : a)),
+  bestLeadTime: quotes.reduce((a, b) => (LEAD_TIME_RANK(b.leadTime) < LEAD_TIME_RANK(a.leadTime) ? b : a)),
+  bestOverall: quotes.find((q) => q.categoryTag === 'Best Overall') || quotes.reduce((a, b) => (b.qualityScore > a.qualityScore ? b : a)),
+});
+
+export const AdminSupplierQuotations: React.FC = () => {
+  const { navigateTo } = useApp();
+  const grouped: Record<string, typeof MOCK_SUPPLIER_QUOTES> = {};
+  MOCK_SUPPLIER_QUOTES.forEach((q) => {
+    (grouped[q.mpn] ||= []).push(q);
+  });
+
+  return (
+    <AdminLayout title="Supplier Quotations">
+      <p className="text-xs text-slate-500 mb-4">Compare supplier responses per part. Internal purchase pricing shown here is never exposed to customers.</p>
+      <div className="space-y-6">
+        {Object.entries(grouped).map(([mpn, quotes]) => {
+          const { bestCommercial, bestQuality, bestLeadTime, bestOverall } = computeQuoteBadges(quotes);
+          return (
+            <div key={mpn} className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+                <span className="font-mono font-bold text-sm text-blue-700">{mpn}</span>
+                <div className="flex flex-wrap gap-1.5 text-[10px]">
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Best Commercial: {bestCommercial.supplierName}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-semibold">Best Quality: {bestQuality.supplierName}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">Best Lead Time: {bestLeadTime.supplierName}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold flex items-center gap-1"><Award className="w-3 h-3" />Best Overall: {bestOverall.supplierName}</span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-slate-50 border-b border-slate-100">
+                    {['Supplier', 'Score', 'Qty Available', 'Unit Price', 'MOQ', 'Date Code', 'Lead Time', 'Condition', 'Country', 'Notes', ''].map((h) => (
+                      <th key={h} className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {quotes.map((q) => (
+                      <tr key={q.id} className="border-b border-slate-50 hover:bg-blue-50/30">
+                        <td className="px-3 py-2.5 font-semibold text-slate-800 whitespace-nowrap">{q.supplierName}</td>
+                        <td className="px-3 py-2.5"><SupplierScoreBadge score={q.supplierScore} /></td>
+                        <td className="px-3 py-2.5 font-mono">{q.availableQuantity.toLocaleString()}</td>
+                        <td className="px-3 py-2.5 font-mono font-bold text-slate-900">₹{q.unitPrice.toFixed(2)}</td>
+                        <td className="px-3 py-2.5 font-mono">{q.moq.toLocaleString()}</td>
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{q.dateCode}</td>
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{q.leadTime}</td>
+                        <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{q.condition}</td>
+                        <td className="px-3 py-2.5 text-slate-600">{q.country}</td>
+                        <td className="px-3 py-2.5 text-slate-500 max-w-[180px] truncate" title={q.notes}>{q.notes || '—'}</td>
+                        <td className="px-3 py-2.5">
+                          <button onClick={() => navigateTo(`/admin/supplier-quotations/${q.id}`)} className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-500">View</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </AdminLayout>
+  );
+};
+
+export const AdminSupplierQuotationDetail: React.FC = () => {
+  const { currentRoute, navigateTo } = useApp();
+  const id = currentRoute.split('/').pop() || '';
+  const quote = MOCK_SUPPLIER_QUOTES.find((q) => q.id === id) || MOCK_SUPPLIER_QUOTES[0];
+  const supplier = MOCK_SUPPLIERS.find((s) => s.id === quote.supplierId);
+
+  return (
+    <AdminLayout title={`Supplier Quote — ${quote.mpn}`}>
+      <button onClick={() => navigateTo('/admin/supplier-quotations')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← Back to Supplier Quotations</button>
+      <div className="grid lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-xs p-5 text-xs">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-mono font-bold text-lg text-blue-700">{quote.mpn}</span>
+            {quote.categoryTag && (
+              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold flex items-center gap-1"><Award className="w-3 h-3" />{quote.categoryTag}</span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {([
+              ['Supplier', quote.supplierName],
+              ['Available Quantity', quote.availableQuantity.toLocaleString()],
+              ['Unit Price', `₹${quote.unitPrice.toFixed(2)} ${quote.currency}`],
+              ['MOQ', quote.moq.toLocaleString()],
+              ['Date Code', quote.dateCode],
+              ['Packaging', quote.packaging],
+              ['Condition', quote.condition],
+              ['Lead Time', quote.leadTime],
+              ['Country of Origin', quote.country],
+              ['Warranty', quote.warranty],
+            ] as [string, string][]).map(([k, v]) => (
+              <div key={k} className="flex justify-between border-b border-slate-50 pb-2"><span className="text-slate-500">{k}</span><span className="font-semibold text-slate-800 text-right">{v}</span></div>
+            ))}
+          </div>
+          {quote.notes && <p className="text-slate-500 italic pt-3">"{quote.notes}"</p>}
+        </div>
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs text-xs space-y-2">
+            <h4 className="font-bold text-sm text-slate-800 mb-1">Supplier Profile</h4>
+            <div className="flex justify-between items-center"><span className="text-slate-500">Score</span><SupplierScoreBadge score={quote.supplierScore} /></div>
+            {supplier && (
+              <>
+                <div className="flex justify-between"><span className="text-slate-500">Location</span><span className="font-medium text-slate-800">{supplier.city}, {supplier.state}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">GST Verified</span><span className="font-medium text-emerald-600">{supplier.gstVerified ? 'Yes' : 'No'}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Response Rate</span><span className="font-medium text-slate-800">{supplier.responseRate}</span></div>
+              </>
+            )}
+          </div>
+          <button onClick={() => navigateTo('/admin/customer-quotations')} className="w-full py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-500 flex items-center justify-center gap-1.5">
+            <ClipboardList className="w-3.5 h-3.5" /> Use in Customer Quotation
+          </button>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
+
+// ─── Customer Quotations ─────────────────────────────────────────────────────
+
+const APPROVAL_STATUS_STYLE: Record<string, string> = {
+  Approved: 'bg-emerald-100 text-emerald-800',
+  Rejected: 'bg-rose-100 text-rose-800',
+};
+
+const ApprovalStatusPill: React.FC<{ status: string }> = ({ status }) => (
+  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${APPROVAL_STATUS_STYLE[status] || 'bg-amber-100 text-amber-800'}`}>{status}</span>
 );
-export const AdminSupplierQuotations: React.FC = () => (
-  <AdminStub title="Supplier Quotations" icon={<DollarSign className="w-8 h-8" />} description="Review and compare supplier quotations for each customer RFQ." version="v1.1" />
-);
-export const AdminSupplierQuotationDetail: React.FC = () => (
-  <AdminStub title="Supplier Quotation Detail" icon={<DollarSign className="w-8 h-8" />} description="View supplier quote details, pricing breakdown, and evaluation scores." version="v1.1" />
-);
-export const AdminCustomerQuotations: React.FC = () => (
-  <AdminStub title="Customer Quotations" icon={<ClipboardList className="w-8 h-8" />} description="Manage quotations sent to customers, approval status, and negotiation logs." version="v1.1" />
-);
-export const AdminCustomerQuotationDetail: React.FC = () => (
-  <AdminStub title="Customer Quotation Detail" icon={<ClipboardList className="w-8 h-8" />} description="View customer quotation, approval chain, and negotiation history." version="v1.1" />
-);
+
+export const AdminCustomerQuotations: React.FC = () => {
+  const { rfqs, customerQuotations, createCustomerQuotationFromRfq, navigateTo } = useApp();
+  const [selectedRfqId, setSelectedRfqId] = useState('');
+  const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
+
+  const eligibleRfqs = rfqs.filter((r) => r.lineItems.some((li) => MOCK_SUPPLIER_QUOTES.some((q) => q.mpn === li.mpn)));
+  const selectedRfq = rfqs.find((r) => r.id === selectedRfqId);
+  const availableQuotesForRfq = selectedRfq
+    ? MOCK_SUPPLIER_QUOTES.filter((q) => selectedRfq.lineItems.some((li) => li.mpn === q.mpn))
+    : [];
+
+  const toggleQuote = (id: string) => {
+    setSelectedQuoteIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+  };
+
+  const handleGenerate = () => {
+    if (!selectedRfqId || selectedQuoteIds.length === 0) return;
+    const newId = createCustomerQuotationFromRfq(selectedRfqId, selectedQuoteIds);
+    setSelectedQuoteIds([]);
+    setSelectedRfqId('');
+    if (newId) navigateTo(`/admin/customer-quotations/${newId}`);
+  };
+
+  return (
+    <AdminLayout title="Customer Quotations">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5 mb-6">
+        <h3 className="font-bold text-sm text-slate-900 mb-3 flex items-center gap-1.5"><Plus className="w-4 h-4" /> Create Quotation from RFQ</h3>
+        <div className="mb-4 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <strong>Demo Calculation:</strong> pricing uses a flat 12% margin + 18% GST, not the Landed Cost Engine
+            (exchange rate, customs duty, SWS, insurance, financing cost, and risk margin are not applied here).
+            Use <button onClick={() => navigateTo('/admin/landed-cost')} className="underline font-semibold hover:text-amber-900">Landed Cost Engine</button> for a real per-item breakdown.
+          </span>
+        </div>
+        <select
+          value={selectedRfqId}
+          onChange={(e) => { setSelectedRfqId(e.target.value); setSelectedQuoteIds([]); }}
+          className="border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white w-full mb-3"
+        >
+          <option value="">Select an RFQ with supplier responses…</option>
+          {eligibleRfqs.map((r) => <option key={r.id} value={r.id}>{r.rfqNumber} — {r.companyName}</option>)}
+        </select>
+        {selectedRfqId && (
+          <div className="space-y-2 mb-3">
+            {availableQuotesForRfq.length === 0 && <p className="text-xs text-slate-400">No supplier quotes available for this RFQ's line items yet.</p>}
+            {availableQuotesForRfq.map((q) => (
+              <label key={q.id} className="flex items-center gap-2 p-2.5 border border-slate-200 rounded-lg text-xs cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" checked={selectedQuoteIds.includes(q.id)} onChange={() => toggleQuote(q.id)} />
+                <span className="font-mono font-bold text-blue-700">{q.mpn}</span>
+                <span className="text-slate-600">{q.supplierName}</span>
+                <span className="ml-auto font-mono font-bold">₹{q.unitPrice.toFixed(2)}</span>
+                {q.categoryTag && <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-semibold">{q.categoryTag}</span>}
+              </label>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={handleGenerate}
+          disabled={!selectedRfqId || selectedQuoteIds.length === 0}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold flex items-center gap-1.5"
+        >
+          <Calculator className="w-3.5 h-3.5" /> Generate Quotation (Demo Calculation)
+        </button>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="bg-slate-50 border-b border-slate-200">
+              {['Quote #', 'RFQ #', 'Customer', 'Items', 'Total (INR)', 'Valid Until', 'Status', 'Pricing', ''].map((h) => (
+                <th key={h} className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px]">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {customerQuotations.map((q) => (
+                <tr key={q.id} className="border-b border-slate-50 hover:bg-blue-50/30">
+                  <td className="px-4 py-3 font-mono font-bold text-slate-800 whitespace-nowrap">{q.quoteNumber}</td>
+                  <td className="px-4 py-3 font-mono text-blue-600 whitespace-nowrap">{q.rfqNumber}</td>
+                  <td className="px-4 py-3 text-slate-700">{q.customerName}</td>
+                  <td className="px-4 py-3 font-mono">{q.items.length}</td>
+                  <td className="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">₹{q.totalInr.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{q.validUntil}</td>
+                  <td className="px-4 py-3"><ApprovalStatusPill status={q.approvalStatus} /></td>
+                  <td className="px-4 py-3">
+                    {q.isDemoCalculation && (
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold whitespace-nowrap">Demo Calc</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => navigateTo(`/admin/customer-quotations/${q.id}`)} className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] font-semibold hover:bg-blue-500">View</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
+
+export const AdminCustomerQuotationDetail: React.FC = () => {
+  const { currentRoute, customerQuotations, navigateTo } = useApp();
+  const id = currentRoute.split('/').pop() || '';
+  const quote = customerQuotations.find((q) => q.id === id) || customerQuotations[0];
+  if (!quote) return null;
+
+  return (
+    <AdminLayout title={`Customer Quotation — ${quote.quoteNumber}`}>
+      <button onClick={() => navigateTo('/admin/customer-quotations')} className="text-blue-600 text-xs hover:underline flex items-center gap-1 mb-4">← Back to Customer Quotations</button>
+      {quote.isDemoCalculation && (
+        <div className="mb-4 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span><strong>{quote.calculationLabel || 'Demo Calculation'}.</strong> This pricing did not go through the Landed Cost Engine and should not be treated as final.</span>
+        </div>
+      )}
+      <div className="grid lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="font-bold text-sm">{quote.quoteNumber} — RFQ {quote.rfqNumber}</h3>
+            <ApprovalStatusPill status={quote.approvalStatus} />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-slate-50 border-b border-slate-100">
+                {['MPN', 'Description', 'Qty', 'Unit Price', 'Total', 'Date Code', 'Lead Time'].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase tracking-wider text-[10px] whitespace-nowrap">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {quote.items.map((item, idx) => (
+                  <tr key={idx} className="border-b border-slate-50">
+                    <td className="px-4 py-3 font-mono font-bold text-blue-700 whitespace-nowrap">{item.mpn}</td>
+                    <td className="px-4 py-3 text-slate-600 max-w-[220px] truncate" title={item.description}>{item.description}</td>
+                    <td className="px-4 py-3 font-mono">{item.quantity.toLocaleString()}</td>
+                    <td className="px-4 py-3 font-mono whitespace-nowrap">₹{item.unitPriceInr.toFixed(2)}</td>
+                    <td className="px-4 py-3 font-mono font-bold whitespace-nowrap">₹{item.totalPriceInr.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{item.dateCode}</td>
+                    <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{item.leadTime}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-5 py-4 border-t border-slate-100 flex justify-end">
+            <div className="space-y-1.5 text-xs w-full max-w-xs">
+              <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-mono">₹{quote.subtotalInr.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Freight</span><span className="font-mono">₹{quote.freightInr.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">GST</span><span className="font-mono">₹{quote.gstInr.toLocaleString()}</span></div>
+              <div className="flex justify-between font-bold text-sm pt-1.5 border-t border-slate-100"><span>Total</span><span className="font-mono">₹{quote.totalInr.toLocaleString()}</span></div>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs text-xs space-y-2">
+            <h4 className="font-bold text-sm text-slate-800">Quotation Info</h4>
+            {([
+              ['Customer', quote.customerName],
+              ['Valid Until', quote.validUntil],
+              ['Currency', quote.currency],
+              ['Payment Terms', quote.paymentTerms],
+            ] as [string, string][]).map(([k, v]) => (
+              <div key={k} className="flex justify-between"><span className="text-slate-500">{k}</span><span className="font-medium text-slate-800 text-right">{v}</span></div>
+            ))}
+          </div>
+          {quote.negotiationLog.length > 0 && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs text-xs space-y-2">
+              <h4 className="font-bold text-sm text-slate-800 mb-1">Negotiation Log</h4>
+              {quote.negotiationLog.map((n) => (
+                <div key={n.id} className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                  <div className="font-semibold text-slate-800">{n.type}</div>
+                  <p className="text-slate-500 mt-0.5">{n.note}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
 export const AdminNegotiations: React.FC = () => (
   <AdminStub title="Negotiations" icon={<DollarSign className="w-8 h-8" />} description="Manage active price negotiations, counter-offers, and approval escalations." version="v2" />
 );

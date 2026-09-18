@@ -7,6 +7,7 @@ import {
   AuditLogRow,
   PartAlert,
   QcInspectionRecord,
+  VendorRfqRecord,
 } from '../types';
 
 export const MOCK_COMPONENTS: ElectronicComponent[] = [
@@ -846,6 +847,16 @@ export const MOCK_SUPPLIER_QUOTES: SupplierQuotationItem[] = [
   },
 ];
 
+export const MOCK_VENDOR_RFQS: VendorRfqRecord[] = [
+  { id: 'vrfq-1', rfqId: 'rfq-101', rfqNumber: 'RFQ-2026-0841', supplierId: 'sup-1', supplierName: 'Demo Supplier A (Franchised Stockist)', sentAt: '2026-09-08 15:10', status: 'Responded', respondedAt: '2026-09-08 17:20' },
+  { id: 'vrfq-2', rfqId: 'rfq-101', rfqNumber: 'RFQ-2026-0841', supplierId: 'sup-2', supplierName: 'Demo Supplier B (Independent Stockist)', sentAt: '2026-09-08 15:10', status: 'Responded', respondedAt: '2026-09-08 18:05' },
+  { id: 'vrfq-3', rfqId: 'rfq-101', rfqNumber: 'RFQ-2026-0841', supplierId: 'sup-3', supplierName: 'Demo Supplier C (EMS Excess Partner)', sentAt: '2026-09-08 15:10', status: 'Responded', respondedAt: '2026-09-08 18:40' },
+  { id: 'vrfq-4', rfqId: 'rfq-101', rfqNumber: 'RFQ-2026-0841', supplierId: 'sup-4', supplierName: 'Demo Supplier D (Regional Stockist)', sentAt: '2026-09-08 15:10', status: 'No Response' },
+  { id: 'vrfq-5', rfqId: 'rfq-102', rfqNumber: 'RFQ-2026-0839', supplierId: 'sup-2', supplierName: 'Demo Supplier B (Independent Stockist)', sentAt: '2026-09-07 11:45', status: 'Responded', respondedAt: '2026-09-07 16:30' },
+  { id: 'vrfq-6', rfqId: 'rfq-102', rfqNumber: 'RFQ-2026-0839', supplierId: 'sup-4', supplierName: 'Demo Supplier D (Regional Stockist)', sentAt: '2026-09-07 11:45', status: 'Sent' },
+  { id: 'vrfq-7', rfqId: 'rfq-102', rfqNumber: 'RFQ-2026-0839', supplierId: 'sup-1', supplierName: 'Demo Supplier A (Franchised Stockist)', sentAt: '2026-09-07 11:45', status: 'Declined' },
+];
+
 export const MOCK_CUSTOMER_QUOTATION: CustomerQuotation = {
   id: 'quote-914',
   quoteNumber: 'Q-2026-0914',
@@ -903,13 +914,48 @@ export const MOCK_CUSTOMER_QUOTATION: CustomerQuotation = {
     {
       id: 'neg-1',
       timestamp: '2026-09-09 11:30',
-      actor: 'Priya Sharma (Customer)',
+      actor: 'Demo User A (Customer)',
       type: 'Price Counter',
       note: 'Requested target price discount on STM32F103C8T6 from ₹158 to ₹152 based on bulk 2,500 pcs requirement.',
       status: 'Pending Review',
     },
   ],
 };
+
+export const MOCK_CUSTOMER_QUOTATIONS: CustomerQuotation[] = [
+  MOCK_CUSTOMER_QUOTATION,
+  {
+    id: 'quote-820',
+    quoteNumber: 'Q-2026-0820',
+    rfqId: 'rfq-090',
+    rfqNumber: 'RFQ-2026-0798',
+    customerName: 'Demo Company C (Consumer Electronics)',
+    customerGst: 'XXDEMO00001X1Z9',
+    validUntil: '2026-09-10',
+    currency: 'INR',
+    items: [
+      {
+        mpn: 'ESP32-WROOM-32E',
+        manufacturer: 'Espressif',
+        description: 'Wi-Fi + BLE MCU Module, 4MB Flash, SMD-38',
+        quantity: 5000,
+        unitPriceInr: 210.0,
+        totalPriceInr: 1050000,
+        dateCode: '2408+ (Original Reels)',
+        countryOfOrigin: 'China',
+        leadTime: '2-3 Days (Ready Stock)',
+        warranty: '12 Months OEM Warranty',
+      },
+    ],
+    subtotalInr: 1050000,
+    freightInr: 3200,
+    gstInr: 189576,
+    totalInr: 1242776,
+    paymentTerms: '15 Days Net (Advance 50%)',
+    approvalStatus: 'Approved',
+    negotiationLog: [],
+  },
+];
 
 export const MOCK_ORDERS: CustomerOrder[] = [
   {
@@ -945,10 +991,10 @@ export const MOCK_ORDERS: CustomerOrder[] = [
   {
     id: 'ord-302',
     orderNumber: 'SO-2026-0408',
-    customerPoNumber: 'PO-VARUN-091',
+    customerPoNumber: 'PO-DEMO-091',
     rfqNumber: 'RFQ-2026-0795',
     quoteNumber: 'Q-2026-0855',
-    customerName: 'Varun Automotive Electronics Ltd',
+    customerName: 'Demo Company D (Automotive Electronics)',
     totalAmountInr: 412000,
     orderDate: '2026-08-28',
     expectedDelivery: '2026-09-06',
@@ -974,7 +1020,7 @@ export const MOCK_QC_RECORDS: QcInspectionRecord[] = [
     orderId: 'SO-2026-0412',
     mpn: 'LM358DR',
     lotNumber: 'LOT-TI-2412-IN',
-    inspector: 'Ramesh K. (Senior Quality Engineer)',
+    inspector: 'Demo Staff D (Senior Quality Engineer)',
     inspectionDate: '2026-09-05 15:45',
     status: 'Passed',
     checklists: [
@@ -994,7 +1040,7 @@ export const MOCK_AUDIT_LOGS: AuditLogRow[] = [
   {
     id: 'aud-901',
     timestamp: '2026-09-09 10:15:22',
-    user: 'Vikram Malhotra',
+    user: 'Demo Staff A',
     role: 'Sales Manager',
     action: 'Changed Customer Quotation Unit Price',
     entity: 'Customer Quotation Item',
@@ -1007,7 +1053,7 @@ export const MOCK_AUDIT_LOGS: AuditLogRow[] = [
   {
     id: 'aud-902',
     timestamp: '2026-09-08 17:45:10',
-    user: 'Suresh Menon',
+    user: 'Demo Staff B',
     role: 'Purchase Executive',
     action: 'Updated Supplier Counter Offer',
     entity: 'Vendor Quotation Item',
@@ -1020,7 +1066,7 @@ export const MOCK_AUDIT_LOGS: AuditLogRow[] = [
   {
     id: 'aud-903',
     timestamp: '2026-09-08 14:32:00',
-    user: 'Priya Sharma',
+    user: 'Demo User A',
     role: 'Customer Procurement',
     action: 'Created RFQ',
     entity: 'Customer RFQ',
@@ -1033,7 +1079,7 @@ export const MOCK_AUDIT_LOGS: AuditLogRow[] = [
   {
     id: 'aud-904',
     timestamp: '2026-09-07 16:20:45',
-    user: 'Kavita Joshi',
+    user: 'Demo Staff C',
     role: 'Inventory Manager',
     action: 'Verified Supplier Stock Lot',
     entity: 'Inventory Lot',

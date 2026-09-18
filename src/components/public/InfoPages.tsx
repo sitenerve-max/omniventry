@@ -489,7 +489,7 @@ export const AuthDemoPage: React.FC = () => {
             >
               <div>
                 <div className="font-bold text-slate-900">Sign in as Internal Operations / Admin</div>
-                <div className="text-[11px] text-slate-600">Vikram Malhotra • Operations & Landed Cost</div>
+                <div className="text-[11px] text-slate-600">Demo Staff A • Operations & Landed Cost</div>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-700" />
             </button>

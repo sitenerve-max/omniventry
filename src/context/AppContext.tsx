@@ -14,9 +14,12 @@ import {
   MOCK_COMPONENTS,
   MOCK_CUSTOMER_RFQS,
   MOCK_CUSTOMER_QUOTATION,
+  MOCK_CUSTOMER_QUOTATIONS,
   MOCK_ORDERS,
   MOCK_PART_ALERTS,
+  MOCK_SUPPLIER_QUOTES,
 } from '../data/mockData';
+import { demoFlatMarginPricingService } from '../services/quotationPricing';
 
 interface AppContextType {
   portal: PortalType;
@@ -31,6 +34,8 @@ interface AppContextType {
   components: ElectronicComponent[];
   rfqs: CustomerRfq[];
   activeQuotation: CustomerQuotation;
+  customerQuotations: CustomerQuotation[];
+  createCustomerQuotationFromRfq: (rfqId: string, quoteIds: string[]) => string;
   orders: CustomerOrder[];
   partAlerts: PartAlert[];
   savedParts: string[];
@@ -61,6 +66,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [components, setComponents] = useState<ElectronicComponent[]>(MOCK_COMPONENTS);
   const [rfqs, setRfqs] = useState<CustomerRfq[]>(MOCK_CUSTOMER_RFQS);
   const [activeQuotation, setActiveQuotation] = useState<CustomerQuotation>(MOCK_CUSTOMER_QUOTATION);
+  const [customerQuotations, setCustomerQuotations] = useState<CustomerQuotation[]>(MOCK_CUSTOMER_QUOTATIONS);
   const [orders] = useState<CustomerOrder[]>(MOCK_ORDERS);
   const [partAlerts, setPartAlerts] = useState<PartAlert[]>(MOCK_PART_ALERTS);
 
@@ -218,6 +224,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return newId;
   };
 
+  const createCustomerQuotationFromRfq = (rfqId: string, quoteIds: string[]): string => {
+    const rfq = rfqs.find((r) => r.id === rfqId);
+    if (!rfq) return '';
+
+    const selectedQuotes = MOCK_SUPPLIER_QUOTES.filter((q) => quoteIds.includes(q.id));
+    const priced = demoFlatMarginPricingService.priceQuotation(rfq, selectedQuotes, MOCK_COMPONENTS);
+
+    const newId = `quote-${Date.now()}`;
+    const newNumber = `Q-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newQuotation: CustomerQuotation = {
+      id: newId,
+      quoteNumber: newNumber,
+      rfqId: rfq.id,
+      rfqNumber: rfq.rfqNumber,
+      customerName: rfq.companyName,
+      customerGst: 'XXDEMO00000X1ZX',
+      validUntil: rfq.requiredDate,
+      currency: rfq.currency,
+      items: priced.items,
+      subtotalInr: priced.subtotalInr,
+      freightInr: priced.freightInr,
+      gstInr: priced.gstInr,
+      totalInr: priced.totalInr,
+      paymentTerms: rfq.paymentTerms,
+      approvalStatus: 'Draft',
+      isDemoCalculation: priced.isDemoCalculation,
+      calculationLabel: priced.calculationLabel,
+      negotiationLog: [],
+    };
+
+    setCustomerQuotations((prev) => [newQuotation, ...prev]);
+    setRfqs((prev) =>
+      prev.map((r) => (r.id === rfqId ? { ...r, status: 'Customer Quotation' } : r))
+    );
+    addToast('Customer Quotation Created (Demo Calculation)', `${newNumber} generated from ${rfq.rfqNumber} with ${priced.items.length} line item(s). Flat margin applied — not the Landed Cost Engine.`, 'warning');
+    return newId;
+  };
+
   const submitNegotiation = (note: string, type: 'Price Counter' | 'Alternate Requested' | 'Quantity Revision') => {
     setActiveQuotation((prev) => ({
       ...prev,
@@ -266,6 +311,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         components,
         rfqs,
         activeQuotation,
+        customerQuotations,
+        createCustomerQuotationFromRfq,
         orders,
         partAlerts,
         savedParts,
