@@ -22,6 +22,8 @@ export const Navbar: React.FC = () => {
     setSearchQuery,
     draftRfqItems,
     setPortal,
+    authUser,
+    logout,
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -133,8 +135,8 @@ export const Navbar: React.FC = () => {
                   P
                 </div>
                 <div className="text-left hidden md:block leading-tight">
-                  <div className="font-semibold text-slate-100">Demo User A</div>
-                  <div className="text-[10px] text-slate-400">Demo Company (Customer)</div>
+                  <div className="font-semibold text-slate-100">{authUser ? authUser.name : 'Guest'}</div>
+                  <div className="text-[10px] text-slate-400">{authUser ? authUser.roles.join(', ') : 'Not signed in'}</div>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
@@ -197,15 +199,28 @@ export const Navbar: React.FC = () => {
                     >
                       Part Alerts
                     </button>
-                    <button
-                      onClick={() => {
-                        navigateTo('/login');
-                        setUserDropdownOpen(false);
-                      }}
-                      className="text-cyan-400 hover:underline"
-                    >
-                      Auth Demo
-                    </button>
+                    {authUser ? (
+                      <button
+                        onClick={() => {
+                          logout();
+                          setUserDropdownOpen(false);
+                          navigateTo('/');
+                        }}
+                        className="text-rose-400 hover:underline"
+                      >
+                        Sign Out
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          navigateTo('/auth/login');
+                          setUserDropdownOpen(false);
+                        }}
+                        className="text-cyan-400 hover:underline"
+                      >
+                        Sign In
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

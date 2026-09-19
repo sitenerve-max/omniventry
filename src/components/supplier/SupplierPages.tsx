@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../lib/api';
+import { useApiData } from '../../lib/useApiData';
 import { ConfidenceBadge, SupplierScoreBadge } from '../common/Badge';
 import {
   Boxes,
@@ -590,9 +592,177 @@ export const SupplierLots: React.FC = () => (
   <SupplierStub title="My Lots" icon={<Layers className="w-8 h-8" />} description="View all inventory lots with expiry tracking, reservation status, and lot-level analytics." version="v2" />
 );
 
-export const SupplierQuotations: React.FC = () => (
-  <SupplierStub title="My Quotations" icon={<ClipboardList className="w-8 h-8" />} description="View all quotations submitted to buyers, track win/loss rates, and manage pending responses." version="v2" />
-);
+interface SupplierRfqItem { id: string; mpn: string; manufacturer: string; requiredQuantity: number; packagingRequirement: string | null; dateCodeRequirement: string | null }
+interface SupplierQuoteRow { id: string; status: string; createdAt: string; items: { id: string; mpn: string; availableQuantity: number; unitPrice: string; leadTime: string }[] }
+interface SupplierVendorRfq {
+  id: string; status: string; sentAt: string;
+  rfq: { id: string; rfqNumber: string; deliveryLocation: string; requiredDate: string | null; items: SupplierRfqItem[] };
+  quotes: SupplierQuoteRow[];
+}
+interface LineDraft { include: boolean; availableQuantity: string; unitPrice: string; moq: string; dateCode: string; packaging: string; leadTime: string; condition: string; countryOfOrigin: string }
+
+const newLineDraft = (item: SupplierRfqItem): LineDraft => ({
+  include: true,
+  availableQuantity: String(item.requiredQuantity),
+  unitPrice: '',
+  moq: '1',
+  dateCode: item.dateCodeRequirement ?? '',
+  packaging: item.packagingRequirement ?? 'Tape & Reel',
+  leadTime: 'Same Day Dispatch',
+  condition: 'New & Original',
+  countryOfOrigin: 'India',
+});
+
+const humanizeStatus = (s: string): string => s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+const VendorRfqCard: React.FC<{ vendorRfq: SupplierVendorRfq; onChanged: () => void }> = ({ vendorRfq, onChanged }) => {
+  const { addToast } = useApp();
+  const [drafts, setDrafts] = useState<Record<string, LineDraft>>(() =>
+    Object.fromEntries(vendorRfq.rfq.items.map((item) => [item.id, newLineDraft(item)])),
+  );
+  const [busy, setBusy] = useState(false);
+  const open = vendorRfq.status === 'SENT';
+
+  const patch = (itemId: string, change: Partial<LineDraft>) =>
+    setDrafts((prev) => ({ ...prev, [itemId]: { ...prev[itemId], ...change } }));
+
+  const buildItems = () =>
+    vendorRfq.rfq.items
+      .filter((item) => drafts[item.id].include)
+      .map((item) => {
+        const d = drafts[item.id];
+        return {
+          rfqItemId: item.id,
+          mpn: item.mpn,
+          availableQuantity: parseInt(d.availableQuantity, 10),
+          unitPrice: parseFloat(d.unitPrice),
+          moq: parseInt(d.moq, 10),
+          dateCode: d.dateCode,
+          packaging: d.packaging,
+          leadTime: d.leadTime,
+          condition: d.condition,
+          countryOfOrigin: d.countryOfOrigin || undefined,
+        };
+      });
+
+  const submit = async (kind: 'quote' | 'partial-supply' | 'cannot-supply') => {
+    setBusy(true);
+    try {
+      if (kind === 'cannot-supply') {
+        await api.post(`/api/supplier/vendor-rfqs/${vendorRfq.id}/cannot-supply`, {});
+      } else {
+        const items = buildItems();
+        if (items.length === 0 || items.some((i) => !(i.unitPrice > 0) || !(i.availableQuantity > 0) || !(i.moq > 0) || !i.dateCode || !i.packaging || !i.leadTime)) {
+          addToast('Incomplete Quote', 'Fill unit price, quantity, MOQ, date code, packaging and lead time for every included line.', 'warning');
+          return;
+        }
+        await api.post(`/api/supplier/vendor-rfqs/${vendorRfq.id}/${kind}`, { items });
+      }
+      addToast('Response Saved', 'Your response was recorded in the database.', 'success');
+      onChanged();
+    } catch (err) {
+      addToast('Submission Failed', err instanceof Error ? err.message : 'Request failed', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = 'w-full p-1.5 border border-slate-300 rounded bg-white text-xs';
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5 mb-5">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+        <span className="font-mono font-bold text-sm text-slate-900">{vendorRfq.rfq.rfqNumber}</span>
+        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">{humanizeStatus(vendorRfq.status)}</span>
+      </div>
+      <p className="text-[11px] text-slate-500 mb-4">
+        Deliver to {vendorRfq.rfq.deliveryLocation}
+        {vendorRfq.rfq.requiredDate ? ` • needed by ${new Date(vendorRfq.rfq.requiredDate).toLocaleDateString()}` : ''}
+      </p>
+
+      {open && (
+        <div className="space-y-3 mb-4">
+          {vendorRfq.rfq.items.map((item) => {
+            const d = drafts[item.id];
+            return (
+              <div key={item.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50 text-xs">
+                <label className="flex items-center gap-2 font-semibold text-slate-900 mb-2">
+                  <input type="checkbox" checked={d.include} onChange={(e) => patch(item.id, { include: e.target.checked })} />
+                  <span className="font-mono">{item.mpn}</span>
+                  <span className="text-slate-500 font-normal">{item.manufacturer} • required {item.requiredQuantity.toLocaleString()} pcs</span>
+                </label>
+                {d.include && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div><span className="text-slate-500">Available Qty</span><input className={field} type="number" value={d.availableQuantity} onChange={(e) => patch(item.id, { availableQuantity: e.target.value })} /></div>
+                    <div><span className="text-slate-500">Unit Price (INR)</span><input className={field} type="number" step="0.01" value={d.unitPrice} onChange={(e) => patch(item.id, { unitPrice: e.target.value })} /></div>
+                    <div><span className="text-slate-500">MOQ</span><input className={field} type="number" value={d.moq} onChange={(e) => patch(item.id, { moq: e.target.value })} /></div>
+                    <div><span className="text-slate-500">Date Code</span><input className={field} value={d.dateCode} onChange={(e) => patch(item.id, { dateCode: e.target.value })} /></div>
+                    <div><span className="text-slate-500">Packaging</span><input className={field} value={d.packaging} onChange={(e) => patch(item.id, { packaging: e.target.value })} /></div>
+                    <div><span className="text-slate-500">Lead Time</span><input className={field} value={d.leadTime} onChange={(e) => patch(item.id, { leadTime: e.target.value })} /></div>
+                    <div><span className="text-slate-500">Condition</span><input className={field} value={d.condition} onChange={(e) => patch(item.id, { condition: e.target.value })} /></div>
+                    <div><span className="text-slate-500">Country of Origin</span><input className={field} value={d.countryOfOrigin} onChange={(e) => patch(item.id, { countryOfOrigin: e.target.value })} /></div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <div className="flex flex-wrap gap-2">
+            <button disabled={busy} onClick={() => submit('quote')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-300 text-white rounded-lg text-xs font-bold">Submit Quote</button>
+            <button disabled={busy} onClick={() => submit('partial-supply')} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-300 text-white rounded-lg text-xs font-bold">Submit Partial Supply</button>
+            <button disabled={busy} onClick={() => submit('cannot-supply')} className="px-4 py-2 border border-rose-400 text-rose-700 hover:bg-rose-50 disabled:opacity-50 rounded-lg text-xs font-bold">Cannot Supply</button>
+          </div>
+        </div>
+      )}
+
+      {vendorRfq.quotes.length > 0 && (
+        <div className="border-t border-slate-100 pt-3 text-xs">
+          <h4 className="font-bold text-slate-800 mb-2">Your submitted responses</h4>
+          {vendorRfq.quotes.map((q) => (
+            <div key={q.id} className="mb-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="font-semibold text-slate-800">{humanizeStatus(q.status)} <span className="text-slate-400 font-normal">• {new Date(q.createdAt).toLocaleString()}</span></div>
+              {q.items.map((i) => (
+                <div key={i.id} className="text-slate-600 font-mono">{i.mpn}: {i.availableQuantity.toLocaleString()} pcs @ ₹{Number(i.unitPrice).toFixed(2)} • {i.leadTime}</div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const SupplierQuotations: React.FC = () => {
+  const { authUser, authLoading, navigateTo } = useApp();
+  const canUse = !!authUser?.supplierId;
+  const { data, loading, error, reload } = useApiData<SupplierVendorRfq[]>(canUse ? '/api/supplier/vendor-rfqs' : null);
+
+  return (
+    <SupplierLayout title="My Quotations">
+      {authLoading ? (
+        <p className="text-sm text-slate-500">Checking session…</p>
+      ) : !canUse ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center max-w-md mx-auto">
+          <ClipboardList className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+          <p className="font-semibold text-slate-800">Supplier sign-in required</p>
+          <p className="text-xs text-slate-500 mt-1 mb-4">Sign in with a supplier account to see the vendor RFQs assigned to you.</p>
+          <button onClick={() => navigateTo('/auth/login')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold">Go to Sign In</button>
+        </div>
+      ) : loading ? (
+        <p className="text-sm text-slate-500">Loading your vendor RFQs…</p>
+      ) : error ? (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs text-rose-800 flex items-center justify-between gap-3">
+          <span>Could not load vendor RFQs: {error}</span>
+          <button onClick={reload} className="px-3 py-1.5 bg-rose-600 text-white rounded font-semibold">Retry</button>
+        </div>
+      ) : (
+        <>
+          <div className="mb-4 text-[10px] font-mono uppercase tracking-wider text-emerald-700">Live data — persisted in PostgreSQL via backend API</div>
+          {(data ?? []).length === 0 && <p className="text-sm text-slate-400">No vendor RFQs have been assigned to you yet.</p>}
+          {(data ?? []).map((v) => <VendorRfqCard key={v.id} vendorRfq={v} onChanged={reload} />)}
+        </>
+      )}
+    </SupplierLayout>
+  );
+};
 
 export const SupplierOrders: React.FC = () => (
   <SupplierStub title="My Orders" icon={<Truck className="w-8 h-8" />} description="Track confirmed purchase orders, dispatch status, and payment settlements from OEMInventory." version="v2" />

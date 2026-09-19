@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import {
   PortalType,
   AdminRole,
+  AuthUser,
   ElectronicComponent,
   CustomerRfq,
   CustomerQuotation,
@@ -10,6 +11,7 @@ import {
   ToastMessage,
   RfqLineItem,
 } from '../types';
+import { api, refreshSession, setAccessToken } from '../lib/api';
 import {
   MOCK_COMPONENTS,
   MOCK_CUSTOMER_RFQS,
@@ -52,6 +54,26 @@ interface AppContextType {
   addToast: (title: string, message: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
   removeToast: (id: string) => void;
   hasPermission: (action: string) => boolean;
+  authUser: AuthUser | null;
+  authLoading: boolean;
+  login: (email: string, password: string) => Promise<AuthUser>;
+  logout: () => Promise<void>;
+  registerCustomer: (input: RegisterCustomerInput) => Promise<AuthUser>;
+  registerSupplier: (input: RegisterSupplierInput) => Promise<AuthUser>;
+}
+
+interface RegisterCustomerInput {
+  email: string;
+  password: string;
+  name: string;
+  companyName: string;
+  phone?: string;
+  gstNumber?: string;
+}
+
+interface RegisterSupplierInput extends RegisterCustomerInput {
+  city?: string;
+  state?: string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -69,6 +91,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [customerQuotations, setCustomerQuotations] = useState<CustomerQuotation[]>(MOCK_CUSTOMER_QUOTATIONS);
   const [orders] = useState<CustomerOrder[]>(MOCK_ORDERS);
   const [partAlerts, setPartAlerts] = useState<PartAlert[]>(MOCK_PART_ALERTS);
+
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [savedParts, setSavedParts] = useState<string[]>(['LM358DR', 'STM32F103C8T6']);
   const [compareList, setCompareList] = useState<string[]>(['LM358DR']);
@@ -102,6 +127,62 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // On mount, silently exchange the httpOnly refresh cookie (if any) for a fresh access
+  // token — this is what lets a real backend session survive a browser refresh even though
+  // the access token itself is kept in memory only (see src/lib/api.ts).
+  useEffect(() => {
+    (async () => {
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        try {
+          const me = await api.get<AuthUser>('/api/auth/me');
+          setAuthUser(me);
+        } catch {
+          setAuthUser(null);
+        }
+      }
+      setAuthLoading(false);
+    })();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<AuthUser> => {
+    const { accessToken } = await api.post<{ accessToken: string }>('/api/auth/login', { email, password });
+    setAccessToken(accessToken);
+    const me = await api.get<AuthUser>('/api/auth/me');
+    setAuthUser(me);
+    addToast('Signed In', `Welcome back, ${me.name}.`, 'success');
+    return me;
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      await api.post('/api/auth/logout');
+    } catch {
+      // Best-effort: clear local session state regardless of whether the network call succeeded.
+    }
+    setAccessToken(null);
+    setAuthUser(null);
+    addToast('Signed Out', 'Your session has been ended.', 'info');
+  };
+
+  const registerCustomer = async (input: RegisterCustomerInput): Promise<AuthUser> => {
+    const { accessToken } = await api.post<{ accessToken: string }>('/api/auth/register/customer', input);
+    setAccessToken(accessToken);
+    const me = await api.get<AuthUser>('/api/auth/me');
+    setAuthUser(me);
+    addToast('Account Created', `Welcome to OEMInventory, ${me.name}.`, 'success');
+    return me;
+  };
+
+  const registerSupplier = async (input: RegisterSupplierInput): Promise<AuthUser> => {
+    const { accessToken } = await api.post<{ accessToken: string }>('/api/auth/register/supplier', input);
+    setAccessToken(accessToken);
+    const me = await api.get<AuthUser>('/api/auth/me');
+    setAuthUser(me);
+    addToast('Supplier Account Created', `Welcome to OEMInventory, ${me.name}.`, 'success');
+    return me;
   };
 
   useEffect(() => {
@@ -329,6 +410,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addToast,
         removeToast,
         hasPermission,
+        authUser,
+        authLoading,
+        login,
+        logout,
+        registerCustomer,
+        registerSupplier,
       }}
     >
       {children}

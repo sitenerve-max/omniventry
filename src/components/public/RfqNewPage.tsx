@@ -13,9 +13,11 @@ import {
   Info,
 } from 'lucide-react';
 import { RfqLineItem } from '../../types';
+import { api } from '../../lib/api';
 
 export const RfqNewPage: React.FC = () => {
-  const { draftRfqItems, addPartToDraftRfq, removeDraftRfqItem, submitNewRfq, navigateTo } = useApp();
+  const { draftRfqItems, addPartToDraftRfq, removeDraftRfqItem, navigateTo, authUser, addToast } = useApp();
+  const [submitting, setSubmitting] = useState(false);
 
   const [companyName, setCompanyName] = useState('Demo Electronics Pvt Ltd');
   const [customerName, setCustomerName] = useState('Demo User A (Procurement)');
@@ -46,21 +48,39 @@ export const RfqNewPage: React.FC = () => {
     setNewQty('1000');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (draftRfqItems.length === 0) return;
-    const newId = submitNewRfq({
-      companyName,
-      customerName,
-      email,
-      phone,
-      deliveryLocation,
-      requiredDate,
-      paymentTerms,
-      remarks,
-    });
-    setSubmittedRfqNumber('RFQ-2026-0841');
-    setIsSubmitted(true);
+    if (draftRfqItems.length === 0 || submitting) return;
+    if (!authUser?.customerId) {
+      addToast('Sign In Required', 'Sign in with a customer account to submit a real RFQ.', 'warning');
+      navigateTo('/auth/login');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created = await api.post<{ id: string; rfqNumber: string }>('/api/rfqs', {
+        requiredDate: requiredDate || undefined,
+        deliveryLocation,
+        currency: 'INR',
+        paymentTerms,
+        remarks,
+        lineItems: draftRfqItems.map((item) => ({
+          mpn: item.mpn,
+          manufacturer: item.manufacturer || 'Unspecified',
+          requiredQuantity: item.requiredQuantity || 1,
+          targetPriceInr: item.targetPriceInr,
+          packagingRequirement: item.packagingRequirement,
+        })),
+      });
+      const submitted = await api.post<{ rfqNumber: string }>(`/api/rfqs/${created.id}/submit`);
+      draftRfqItems.forEach((item) => item.mpn && removeDraftRfqItem(item.mpn));
+      setSubmittedRfqNumber(submitted.rfqNumber);
+      setIsSubmitted(true);
+    } catch (err) {
+      addToast('RFQ Submission Failed', err instanceof Error ? err.message : 'Unable to reach the backend.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (isSubmitted) {

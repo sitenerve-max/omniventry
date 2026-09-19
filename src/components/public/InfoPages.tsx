@@ -435,16 +435,36 @@ export const ContactPage: React.FC = () => {
   );
 };
 
-export const AuthDemoPage: React.FC = () => {
-  const { setPortal, navigateTo, addToast } = useApp();
-  const [accountType, setAccountType] = useState<'Customer' | 'Supplier' | 'OEM' | 'Enterprise'>('Customer');
+const DEMO_ACCOUNTS = {
+  customer: { email: 'buyer@demo.oeminventory.local', label: 'Sign in as Customer (OEM/EMS)', hint: 'Demo User A • Demo Company A', style: 'blue' as const },
+  supplier: { email: 'supplier-a@demo.oeminventory.local', label: 'Sign in as Supplier / Stockist', hint: 'Demo Staff B • Demo Supplier A', style: 'emerald' as const },
+  admin: { email: 'admin@demo.oeminventory.local', label: 'Sign in as Internal Operations / Admin', hint: 'Demo Staff A • Operations & Landed Cost', style: 'slate' as const },
+};
+const DEMO_PASSWORD = 'Demo@12345';
 
-  const handleSimulateLogin = (portalTarget: 'customer' | 'supplier' | 'admin') => {
-    setPortal(portalTarget);
-    if (portalTarget === 'customer') navigateTo('/customer/dashboard');
-    else if (portalTarget === 'supplier') navigateTo('/supplier/dashboard');
-    else navigateTo('/admin/dashboard');
-    addToast('Authentication Simulated', `Logged in as demo ${portalTarget.toUpperCase()} user.`, 'success');
+const roleHomeRoute = (roles: string[]): string => {
+  if (roles.some((r) => ['SUPER_ADMIN', 'ADMIN', 'SALES_MANAGER', 'SALES_EXECUTIVE', 'PURCHASE_MANAGER', 'PURCHASE_EXECUTIVE', 'INVENTORY_MANAGER', 'FINANCE_MANAGER'].includes(r))) return '/admin/dashboard';
+  if (roles.includes('SUPPLIER')) return '/supplier/dashboard';
+  return '/customer/dashboard';
+};
+
+export const AuthDemoPage: React.FC = () => {
+  const { navigateTo, login, addToast } = useApp();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const doLogin = async (loginEmail: string, loginPassword: string) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const user = await login(loginEmail, loginPassword);
+      navigateTo(roleHomeRoute(user.roles));
+    } catch (err) {
+      addToast('Sign In Failed', err instanceof Error ? err.message : 'Unable to sign in. Is the backend running?', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -459,41 +479,58 @@ export const AuthDemoPage: React.FC = () => {
             <p className="text-xs text-slate-500 mt-0.5">Technical Procurement & Inventory Network</p>
           </div>
 
-          <div className="space-y-3 mb-6 text-xs">
-            <label className="block text-slate-700 font-medium">Quick Portal Switch (Prototype Simulator):</label>
-            <button
-              onClick={() => handleSimulateLogin('customer')}
-              className="w-full p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-left flex items-center justify-between"
-            >
-              <div>
-                <div className="font-bold text-blue-900">Sign in as Customer (OEM/EMS)</div>
-                <div className="text-[11px] text-blue-700">Demo User A • Demo Electronics Pvt Ltd</div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-blue-600" />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              doLogin(email, password);
+            }}
+            className="space-y-3 mb-6"
+          >
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <button type="submit" disabled={submitting}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 text-white rounded-lg text-sm font-bold">
+              {submitting ? 'Signing In…' : 'Sign In'}
             </button>
+          </form>
 
-            <button
-              onClick={() => handleSimulateLogin('supplier')}
-              className="w-full p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-left flex items-center justify-between"
-            >
-              <div>
-                <div className="font-bold text-emerald-900">Sign in as Supplier / Stockist</div>
-                <div className="text-[11px] text-emerald-700">Rajesh Kumar • Apex Microelectronics</div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-emerald-600" />
-            </button>
-
-            <button
-              onClick={() => handleSimulateLogin('admin')}
-              className="w-full p-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-left flex items-center justify-between"
-            >
-              <div>
-                <div className="font-bold text-slate-900">Sign in as Internal Operations / Admin</div>
-                <div className="text-[11px] text-slate-600">Demo Staff A • Operations & Landed Cost</div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-700" />
-            </button>
+          {import.meta.env.DEV && (
+          <div className="space-y-3 mb-2 text-xs">
+            <label className="block text-slate-700 font-medium">Quick Sign-In (Seeded Demo Accounts — development builds only):</label>
+            {Object.values(DEMO_ACCOUNTS).map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                disabled={submitting}
+                onClick={() => doLogin(account.email, DEMO_PASSWORD)}
+                className={`w-full p-3 rounded-xl text-left flex items-center justify-between border ${
+                  account.style === 'blue' ? 'bg-blue-50 hover:bg-blue-100 border-blue-200' :
+                  account.style === 'emerald' ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200' :
+                  'bg-slate-100 hover:bg-slate-200 border-slate-300'
+                }`}
+              >
+                <div>
+                  <div className="font-bold text-slate-900">{account.label}</div>
+                  <div className="text-[11px] text-slate-600">{account.hint}</div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-600" />
+              </button>
+            ))}
           </div>
+          )}
+          {import.meta.env.DEV && (
+            <p className="text-[10px] text-slate-400 text-center mt-2">
+              Requires the backend (server/) running locally and seeded — see server/README.md.
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -503,7 +540,33 @@ export const AuthDemoPage: React.FC = () => {
 // ─── Auth Pages ───────────────────────────────────────────────────────────────
 
 export const RegisterPage: React.FC = () => {
-  const { navigateTo } = useApp();
+  const { navigateTo, registerCustomer, registerSupplier, addToast } = useApp();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [workEmail, setWorkEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [accountType, setAccountType] = useState<'Buyer / OEM / EMS' | 'Supplier / Stockist / Trader'>('Buyer / OEM / EMS');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const name = `${firstName} ${lastName}`.trim();
+      const input = { email: workEmail, password, name, companyName };
+      const user = accountType === 'Supplier / Stockist / Trader'
+        ? await registerSupplier(input)
+        : await registerCustomer(input);
+      navigateTo(roleHomeRoute(user.roles));
+    } catch (err) {
+      addToast('Registration Failed', err instanceof Error ? err.message : 'Unable to create account. Is the backend running?', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-md">
@@ -511,50 +574,56 @@ export const RegisterPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
           <p className="text-sm text-slate-500 mt-1">Join OEMInventory as a buyer or supplier</p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+        <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">First Name</label>
-                <input type="text" placeholder="Rahul" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" required placeholder="Rahul" value={firstName} onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name</label>
-                <input type="text" placeholder="Sharma" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" required placeholder="Sharma" value={lastName} onChange={(e) => setLastName(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Work Email</label>
-              <input type="email" placeholder="you@company.com" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="email" required placeholder="you@company.com" value={workEmail} onChange={(e) => setWorkEmail(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Company Name</label>
-              <input type="text" placeholder="Acme Electronics Pvt Ltd" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="text" required placeholder="Acme Electronics Pvt Ltd" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Account Type</label>
-              <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <select value={accountType} onChange={(e) => setAccountType(e.target.value as typeof accountType)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option>Buyer / OEM / EMS</option>
                 <option>Supplier / Stockist / Trader</option>
-                <option>Distributor</option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
-              <input type="password" placeholder="Min 8 characters" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="password" required minLength={8} placeholder="Min 8 characters" value={password} onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
           <button
-            onClick={() => navigateTo('/auth/login')}
-            className="w-full mt-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold"
+            type="submit"
+            disabled={submitting}
+            className="w-full mt-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 text-white rounded-lg text-sm font-bold"
           >
-            Create Account (Demo — No Data Saved)
+            {submitting ? 'Creating Account…' : 'Create Account'}
           </button>
           <p className="text-center text-xs text-slate-500 mt-4">
             Already have an account?{' '}
-            <button onClick={() => navigateTo('/auth/login')} className="text-blue-600 hover:underline font-semibold">Sign In</button>
+            <button type="button" onClick={() => navigateTo('/auth/login')} className="text-blue-600 hover:underline font-semibold">Sign In</button>
           </p>
-        </div>
+        </form>
       </div>
     </div>
   );

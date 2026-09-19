@@ -286,6 +286,15 @@ export interface PartAlert {
   lastTriggered?: string;
 }
 
+export interface AuthUser {
+  userId: string;
+  email: string;
+  name: string;
+  roles: string[];
+  customerId?: string;
+  supplierId?: string;
+}
+
 export interface VendorRfqRecord {
   id: string;
   rfqId: string;
