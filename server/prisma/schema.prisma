@@ -1,0 +1,725 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────
+
+enum RoleName {
+  SUPER_ADMIN
+  ADMIN
+  SALES_MANAGER
+  SALES_EXECUTIVE
+  PURCHASE_MANAGER
+  PURCHASE_EXECUTIVE
+  INVENTORY_MANAGER
+  FINANCE_MANAGER
+  SUPPLIER
+  CUSTOMER
+  ENTERPRISE_CUSTOMER
+}
+
+enum InventoryStatus {
+  ACTIVE
+  INACTIVE
+  VERIFICATION_REQUIRED
+}
+
+enum RfqStatus {
+  DRAFT
+  SUBMITTED
+  SUPPLIER_MATCHING
+  VENDOR_RFQ_SENT
+  SUPPLIER_RESPONSE
+  UNDER_EVALUATION
+  CUSTOMER_QUOTATION
+  NEGOTIATION
+  ACCEPTED
+  PO_RECEIVED
+  COMPLETED
+  CANCELLED
+  REJECTED
+  EXPIRED
+}
+
+enum RfqItemStatus {
+  PENDING
+  QUOTED
+  NEGOTIATING
+  ACCEPTED
+  DECLINED
+}
+
+enum VendorRfqStatus {
+  SENT
+  RESPONDED
+  DECLINED
+  NO_RESPONSE
+}
+
+enum SupplierQuoteStatus {
+  SUBMITTED
+  CANNOT_SUPPLY
+  PARTIAL_SUPPLY
+}
+
+enum CustomerQuotationStatus {
+  DRAFT
+  PENDING_APPROVAL
+  SENT
+  VIEWED
+  NEGOTIATION
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum PurchaseOrderStatus {
+  CREATED
+  CONFIRMED
+  CANCELLED
+}
+
+enum BomUploadStatus {
+  UPLOADED
+  PARSED
+  MATCHED
+  FAILED
+}
+
+enum BomMatchType {
+  EXACT
+  MANUFACTURER_ALTERNATIVE
+  EQUIVALENT
+  NO_MATCH
+}
+
+// ─── Identity & Access ───────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  roles         UserRole[]
+  customerUser  CustomerUser?
+  supplierUser  SupplierUser?
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  name      RoleName @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Customer ────────────────────────────────────────────────────────────
+
+model Customer {
+  id         String   @id @default(cuid())
+  companyName String
+  gstNumber  String?
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users       CustomerUser[]
+  addresses   CustomerAddress[]
+  rfqs        Rfq[]
+  quotations  CustomerQuotation[]
+  purchaseOrders PurchaseOrder[]
+  bomUploads  BomUpload[]
+}
+
+model CustomerUser {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  customerId String
+  title      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model CustomerAddress {
+  id         String   @id @default(cuid())
+  customerId String
+  label      String
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  postalCode String
+  country    String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+// ─── Supplier ────────────────────────────────────────────────────────────
+
+model Supplier {
+  id            String   @id @default(cuid())
+  companyName   String
+  legalName     String?
+  gstNumber     String?
+  businessType  String?
+  city          String?
+  state         String?
+  country       String?
+  isVerified    Boolean  @default(false)
+  isAnonymous   Boolean  @default(false)
+  supplierScore Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users       SupplierUser[]
+  documents   SupplierDocument[]
+  inventory   Inventory[]
+  vendorRfqs  VendorRfq[]
+  quotes      SupplierQuote[]
+}
+
+model SupplierUser {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  supplierId String
+  title      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+model SupplierDocument {
+  id         String    @id @default(cuid())
+  supplierId String
+  type       String
+  fileName   String
+  storageKey String
+  uploadedAt DateTime  @default(now())
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+}
+
+// ─── Catalog ─────────────────────────────────────────────────────────────
+
+model Manufacturer {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([name])
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  parentId  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryToCategory")
+  products Product[]
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  mpn            String
+  normalizedMpn  String
+  manufacturerId String
+  categoryId     String?
+  description    String
+  packageType    String?
+  lifecycle      String?
+  rohsCompliant  Boolean  @default(false)
+  reachCompliant Boolean  @default(false)
+  datasheetUrl   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  manufacturer   Manufacturer          @relation(fields: [manufacturerId], references: [id])
+  category       Category?             @relation(fields: [categoryId], references: [id])
+  specifications ProductSpecification[]
+  documents      ProductDocument[]
+  aliases        ProductAlias[]
+  inventory      Inventory[]
+  rfqItems       RfqItem[]
+
+  @@unique([mpn, manufacturerId])
+  @@index([mpn])
+  @@index([normalizedMpn])
+}
+
+model ProductSpecification {
+  id        String   @id @default(cuid())
+  productId String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductDocument {
+  id        String   @id @default(cuid())
+  productId String
+  type      String
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductAlias {
+  id                 String   @id @default(cuid())
+  productId          String
+  aliasMpn           String
+  normalizedAliasMpn String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([normalizedAliasMpn])
+}
+
+// ─── Inventory ───────────────────────────────────────────────────────────
+
+model Inventory {
+  id                  String           @id @default(cuid())
+  productId           String
+  supplierId          String
+  quantity            Int
+  uom                 String           @default("PCS")
+  unitPrice           Decimal          @db.Decimal(14, 4)
+  currency            String           @default("INR")
+  moq                 Int              @default(1)
+  status              InventoryStatus  @default(VERIFICATION_REQUIRED)
+  condition           String
+  countryOfOrigin     String?
+  location             String?
+  leadTime            String?
+  rohs                Boolean          @default(false)
+  reach               Boolean          @default(false)
+  certificateAvailable Boolean         @default(false)
+  datasheetUrl        String?
+  remarks             String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  product  Product   @relation(fields: [productId], references: [id])
+  supplier Supplier  @relation(fields: [supplierId], references: [id])
+  lots     InventoryLot[]
+  history  InventoryHistory[]
+
+  @@index([productId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+model InventoryLot {
+  id                 String   @id @default(cuid())
+  inventoryId        String
+  lotNumber          String
+  quantity           Int
+  availableQuantity  Int
+  reservedQuantity   Int      @default(0)
+  dateCode           String
+  packaging          String
+  unitPrice          Decimal? @db.Decimal(14, 4)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId])
+  @@index([dateCode])
+}
+
+model InventoryHistory {
+  id            String   @id @default(cuid())
+  inventoryId   String
+  action        String
+  oldValue      String?
+  newValue      String?
+  changedByUserId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId])
+}
+
+// ─── RFQ -> Vendor RFQ -> Supplier Quote -> Customer Quotation ────────────
+
+model Rfq {
+  id              String    @id @default(cuid())
+  rfqNumber       String    @unique
+  customerId      String
+  createdByUserId String
+  status          RfqStatus @default(DRAFT)
+  requiredDate    DateTime?
+  deliveryLocation String
+  currency        String    @default("INR")
+  paymentTerms    String?
+  remarks         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  items      RfqItem[]
+  vendorRfqs VendorRfq[]
+  quotations CustomerQuotation[]
+
+  @@index([status])
+  @@index([customerId])
+}
+
+model RfqItem {
+  id                   String        @id @default(cuid())
+  rfqId                String
+  productId            String?
+  mpn                  String
+  manufacturer         String
+  requiredQuantity     Int
+  targetPriceInr       Decimal?      @db.Decimal(14, 4)
+  targetDate           DateTime?
+  packagingRequirement String?
+  dateCodeRequirement  String?
+  qualityRequirement   String?
+  notes                String?
+  status               RfqItemStatus @default(PENDING)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  rfq                Rfq                 @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  product            Product?            @relation(fields: [productId], references: [id])
+  vendorRfqItems     VendorRfqItem[]
+  supplierQuoteItems SupplierQuoteItem[]
+
+  @@index([rfqId])
+}
+
+model VendorRfq {
+  id         String          @id @default(cuid())
+  rfqId      String
+  supplierId String
+  status     VendorRfqStatus @default(SENT)
+  sentAt     DateTime        @default(now())
+  respondedAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  rfq      Rfq             @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplier Supplier        @relation(fields: [supplierId], references: [id])
+  items    VendorRfqItem[]
+  quotes   SupplierQuote[]
+
+  @@unique([rfqId, supplierId])
+  @@index([status])
+}
+
+model VendorRfqItem {
+  id          String   @id @default(cuid())
+  vendorRfqId String
+  rfqItemId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendorRfq VendorRfq @relation(fields: [vendorRfqId], references: [id], onDelete: Cascade)
+  rfqItem   RfqItem   @relation(fields: [rfqItemId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorRfqId, rfqItemId])
+}
+
+model SupplierQuote {
+  id          String              @id @default(cuid())
+  vendorRfqId String
+  supplierId  String
+  status      SupplierQuoteStatus @default(SUBMITTED)
+  currency    String              @default("INR")
+  remarks     String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  vendorRfq VendorRfq           @relation(fields: [vendorRfqId], references: [id], onDelete: Cascade)
+  supplier  Supplier            @relation(fields: [supplierId], references: [id])
+  items     SupplierQuoteItem[]
+
+  @@index([status])
+  @@index([supplierId])
+}
+
+model SupplierQuoteItem {
+  id                   String   @id @default(cuid())
+  supplierQuoteId      String
+  rfqItemId            String
+  mpn                  String
+  availableQuantity    Int
+  unitPrice            Decimal  @db.Decimal(14, 4)
+  moq                  Int
+  dateCode             String
+  packaging            String
+  leadTime             String
+  warranty             String?
+  countryOfOrigin      String?
+  certificateAvailable Boolean  @default(false)
+  condition            String
+  qualityScore         Int?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  supplierQuote SupplierQuote @relation(fields: [supplierQuoteId], references: [id], onDelete: Cascade)
+  rfqItem       RfqItem       @relation(fields: [rfqItemId], references: [id])
+
+  @@index([supplierQuoteId])
+}
+
+model CustomerQuotation {
+  id                String                  @id @default(cuid())
+  quoteNumber       String                  @unique
+  rfqId             String
+  customerId        String
+  status            CustomerQuotationStatus @default(DRAFT)
+  currency          String                  @default("INR")
+  subtotal          Decimal                 @db.Decimal(14, 2)
+  freight           Decimal                 @db.Decimal(14, 2)
+  gst               Decimal                 @db.Decimal(14, 2)
+  total             Decimal                 @db.Decimal(14, 2)
+  paymentTerms      String?
+  validUntil        DateTime?
+  isDemoCalculation Boolean                 @default(true)
+  calculationLabel  String?
+  createdByUserId   String
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  rfq            Rfq                     @relation(fields: [rfqId], references: [id])
+  customer       Customer                @relation(fields: [customerId], references: [id])
+  items          CustomerQuotationItem[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([status])
+  @@index([customerId])
+}
+
+model CustomerQuotationItem {
+  id                  String   @id @default(cuid())
+  customerQuotationId String
+  mpn                 String
+  manufacturer        String
+  description         String
+  quantity            Int
+  unitPrice           Decimal  @db.Decimal(14, 4)
+  totalPrice          Decimal  @db.Decimal(14, 2)
+  dateCode            String?
+  countryOfOrigin     String?
+  leadTime            String?
+  warranty            String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  customerQuotation CustomerQuotation @relation(fields: [customerQuotationId], references: [id], onDelete: Cascade)
+
+  @@index([customerQuotationId])
+}
+
+// ─── Purchase Order (created after quotation acceptance) ──────────────────
+
+model PurchaseOrder {
+  id                  String              @id @default(cuid())
+  poNumber            String              @unique
+  customerId          String
+  customerQuotationId String
+  status              PurchaseOrderStatus @default(CREATED)
+  totalAmount         Decimal             @db.Decimal(14, 2)
+  orderDate           DateTime            @default(now())
+  expectedDelivery    DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  customer          Customer          @relation(fields: [customerId], references: [id])
+  customerQuotation CustomerQuotation @relation(fields: [customerQuotationId], references: [id])
+  items             PurchaseOrderItem[]
+
+  @@index([customerId])
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  mpn             String
+  manufacturer    String
+  quantity        Int
+  unitPrice       Decimal  @db.Decimal(14, 4)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+}
+
+// ─── BOM Upload ────────────────────────────────────────────────────────────
+
+model BomUpload {
+  id               String          @id @default(cuid())
+  customerId       String
+  fileName         String
+  status           BomUploadStatus @default(UPLOADED)
+  uploadedByUserId String
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  customer Customer   @relation(fields: [customerId], references: [id])
+  items    BomItem[]
+
+  @@index([customerId])
+}
+
+model BomItem {
+  id           String   @id @default(cuid())
+  bomUploadId  String
+  rowNumber    Int
+  mpn          String
+  manufacturer String?
+  quantity     Int
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bomUpload BomUpload  @relation(fields: [bomUploadId], references: [id], onDelete: Cascade)
+  matches   BomMatch[]
+
+  @@index([bomUploadId])
+}
+
+model BomMatch {
+  id         String       @id @default(cuid())
+  bomItemId  String
+  productId  String?
+  matchType  BomMatchType
+  confidence Int?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  bomItem BomItem @relation(fields: [bomItemId], references: [id], onDelete: Cascade)
+
+  @@index([bomItemId])
+}
+
+// ─── Audit ─────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  role      String?
+  action    String
+  entity    String
+  entityId  String
+  oldValue  String?
+  newValue  String?
+  reason    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+}
